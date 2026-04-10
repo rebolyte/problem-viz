@@ -53,6 +53,26 @@ export function App() {
           if (event.type === "agent-message") {
             workspaceStore.actions.handleAgentEvent(event.payload);
           }
+          if (event.type === "agent-mutation") {
+            const server = workspaceStore.getSnapshot().server;
+            if (!server) return;
+            const mutationType = event.payload.type;
+            if (
+              mutationType === "add_node" ||
+              mutationType === "update_node" ||
+              mutationType === "delete_node"
+            ) {
+              void workspaceStore.actions.refreshNodes(server);
+            } else if (
+              mutationType === "add_edge" ||
+              mutationType === "update_edge" ||
+              mutationType === "delete_edge"
+            ) {
+              void workspaceStore.actions.refreshEdges(server);
+            } else if (mutationType === "set_problem_statement") {
+              void workspaceStore.actions.refreshProblemStatement(server);
+            }
+          }
         });
 
         const simClient = new SimClientImpl(

@@ -159,6 +159,21 @@ export const workspaceStore = {
     setVerifyProgress(progress: VerifyProgress) {
       setState((previous) => ({ ...previous, verifyProgress: progress }));
     },
+    async refreshNodes(server: LoomServerApi) {
+      const result = await server.listNodes();
+      if (result.ok) setState((previous) => ({ ...previous, nodes: result.value }));
+      else console.warn("refreshNodes failed", result.error);
+    },
+    async refreshEdges(server: LoomServerApi) {
+      const result = await server.listEdges();
+      if (result.ok) setState((previous) => ({ ...previous, edges: result.value }));
+      else console.warn("refreshEdges failed", result.error);
+    },
+    async refreshProblemStatement(server: LoomServerApi) {
+      const result = await server.getProblemStatement();
+      if (result.ok) setState((previous) => ({ ...previous, problemStatement: result.value }));
+      else console.warn("refreshProblemStatement failed", result.error);
+    },
   },
   __resetForTests() {
     state = initialState();
