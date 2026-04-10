@@ -19,15 +19,26 @@ export function ControlPanel(_props: IDockviewPanelProps) {
     <div className="flex h-full flex-col gap-3 bg-neutral-950 p-3 text-sm text-neutral-100">
       <div className="flex items-center justify-between">
         <span className="text-xs uppercase tracking-wide text-neutral-400">Control panel</span>
-        <button
-          className="rounded border border-neutral-700 px-2 py-1 text-xs"
-          onClick={async () => {
-            await server?.verify({});
-          }}
-          type="button"
-        >
-          Verify
-        </button>
+        <div className="flex gap-2">
+          <button
+            className="rounded border border-neutral-700 px-2 py-1 text-xs"
+            type="button"
+            onClick={() => {
+              if (server) void workspaceStore.actions.seedCompoundInterest(server);
+            }}
+          >
+            Seed compound interest
+          </button>
+          <button
+            className="rounded border border-neutral-700 px-2 py-1 text-xs"
+            onClick={async () => {
+              await server?.verify({});
+            }}
+            type="button"
+          >
+            Verify
+          </button>
+        </div>
       </div>
       <div className="text-xs text-neutral-400">
         {verifyProgress

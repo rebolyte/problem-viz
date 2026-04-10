@@ -9,6 +9,7 @@ import { CanvasPanel } from "./canvas-panel.tsx";
 import { ChatPanel } from "./chat-panel.tsx";
 import { ControlPanel } from "./control-panel.tsx";
 import { LensTabsPanel } from "./lens-tabs-panel.tsx";
+import { NodeInspectorPanel } from "./node-inspector-panel.tsx";
 import { ProblemStatementPanel } from "./problem-statement-panel.tsx";
 import { TimelinePanel } from "./timeline-panel.tsx";
 import { workspaceStore } from "../state/workspace-store.ts";
@@ -49,6 +50,12 @@ const addDefaultPanels = (api: DockviewApi) => {
     title: "Lens Tabs",
     position: { referencePanel: "timeline", direction: "within" },
   });
+  api.addPanel({
+    id: "node-inspector",
+    component: "node-inspector",
+    title: "Inspector",
+    position: { referencePanel: "control", direction: "within" },
+  });
 };
 
 export function DockviewLayout() {
@@ -69,6 +76,7 @@ export function DockviewLayout() {
       chat: ChatPanel,
       timeline: TimelinePanel,
       "lens-tabs": LensTabsPanel,
+      "node-inspector": NodeInspectorPanel,
     }),
     [],
   );

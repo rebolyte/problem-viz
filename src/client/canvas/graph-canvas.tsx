@@ -47,9 +47,19 @@ export function GraphCanvas() {
     });
   };
 
+  const onNodeClick = (_event: unknown, node: Node) => {
+    workspaceStore.actions.setSelectedNodeId(node.id);
+  };
+
   return (
     <div className="h-full w-full">
-      <ReactFlow fitView edges={edges} nodes={nodes} onNodeDragStop={onNodeDragStop}>
+      <ReactFlow
+        fitView
+        edges={edges}
+        nodes={nodes}
+        onNodeClick={onNodeClick}
+        onNodeDragStop={onNodeDragStop}
+      >
         <Background />
         <Controls />
       </ReactFlow>

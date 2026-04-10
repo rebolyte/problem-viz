@@ -4,6 +4,7 @@ import type { AgentMessage, VerifyProgress } from "../../rpc/loom-client.ts";
 import type { LoomServerApi, WorkspaceSnapshot } from "../../rpc/loom-server.ts";
 import type { SimEngineApi } from "../../rpc/sim-engine.ts";
 import type { GraphEdge, GraphNode } from "../../server/graph/store.ts";
+import { buildCompoundInterestGraph } from "./seed-example.ts";
 
 export type ChatMessage = {
   role: "user" | "assistant";
@@ -21,6 +22,7 @@ export type WorkspaceState = {
   sim: SimEngineApi | null;
   chatMessages: ChatMessage[];
   verifyProgress: VerifyProgress | null;
+  selectedNodeId: string | null;
 };
 
 const initialState = (): WorkspaceState => ({
@@ -34,6 +36,7 @@ const initialState = (): WorkspaceState => ({
   sim: null,
   chatMessages: [],
   verifyProgress: null,
+  selectedNodeId: null,
 });
 
 let state = initialState();
@@ -158,6 +161,28 @@ export const workspaceStore = {
     },
     setVerifyProgress(progress: VerifyProgress) {
       setState((previous) => ({ ...previous, verifyProgress: progress }));
+    },
+    setSelectedNodeId(id: string | null) {
+      setState((previous) => ({ ...previous, selectedNodeId: id }));
+    },
+    async seedCompoundInterest(server: LoomServerApi) {
+      const { nodes, edges } = buildCompoundInterestGraph();
+      for (const node of nodes) {
+        const r = await server.addNode(node);
+        if (!r.ok) {
+          console.warn("seed addNode failed", r.error);
+          return;
+        }
+      }
+      for (const edge of edges) {
+        const r = await server.addEdge(edge);
+        if (!r.ok) {
+          console.warn("seed addEdge failed", r.error);
+          return;
+        }
+      }
+      await workspaceStore.actions.refreshNodes(server);
+      await workspaceStore.actions.refreshEdges(server);
     },
     async refreshNodes(server: LoomServerApi) {
       const result = await server.listNodes();
