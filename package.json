@@ -11,6 +11,7 @@
     "@logtape/pretty": "^2.0.5",
     "@logtape/redaction": "^2.0.5",
     "better-result": "^2.7.0",
+    "capnweb": "^0.6.1",
     "elysia": "^1.4.28",
     "kysely": "^0.28.15",
     "marked": "^17.0.6",
