@@ -10,3 +10,138 @@ body {
   background: #0a0a0a;
   color: #f5f5f5;
 }
+
+.content p:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.content h1 {
+  font-size: 2rem;
+}
+
+.content h2 {
+  font-size: 1.5rem;
+}
+
+.content h3 {
+  font-size: 1.25rem;
+}
+
+.content h4 {
+  font-size: 1.125rem;
+}
+
+.content h5 {
+  font-size: 1rem;
+}
+
+.content h6 {
+  font-size: 0.875rem;
+}
+
+.content code {
+  font-family:
+    "Droid Sans Mono", "Menlo", "Monaco", "DejaVu Sans Mono", "Consolas", "Courier New", monospace;
+  font-size: 0.85rem;
+  border-radius: 0.15rem;
+  border: 1px solid #333;
+  background: #202132;
+  padding: 0 0.15rem;
+  display: inline-block;
+  color: #ccc;
+  line-height: 1.3em;
+}
+
+.content pre {
+  max-width: 100%;
+  border: 1px solid #333;
+  background: #202132;
+  border-radius: 0.15rem;
+  padding: 0.45rem;
+  overflow-x: auto;
+  tab-size: 4;
+  margin: 0.5rem 0;
+}
+
+.content pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: inline;
+}
+
+.content a {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.content a:hover {
+  color: #bae6fd;
+}
+
+.content table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  background-color: #171717;
+}
+
+.content table th,
+.content table td {
+  padding: 6px 12px;
+}
+
+.content table th {
+  text-align: left;
+  background: #404040;
+}
+
+.content table tr:nth-child(2n) {
+  background-color: #262626;
+}
+
+.content .stripe {
+  background-color: #d91e0f;
+  height: 8px;
+}
+
+.content blockquote {
+  font-style: italic;
+  color: #a3a3a3;
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+  border-left: 2px solid #404040;
+}
+
+.content ul,
+.content ol {
+  padding-left: 1.25rem;
+  margin-left: 0.75rem;
+}
+
+.content ul {
+  list-style-type: disc;
+}
+
+.content ol {
+  list-style-type: decimal;
+}
+
+.content li {
+  padding-left: 0.5rem;
+}
+
+.content ul:not(:last-child),
+.content ol:not(:last-child) {
+  margin-bottom: 1rem;
+}

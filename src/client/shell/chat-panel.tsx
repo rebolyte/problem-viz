@@ -1,6 +1,45 @@
 import type { IDockviewPanelProps } from "dockview-react";
 import { useState } from "react";
+import { marked } from "marked";
 import { workspaceStore } from "../state/workspace-store.ts";
+
+type DocumentWithParseHTML = {
+  parseHTML?: (html: string) => {
+    body: {
+      innerHTML: string;
+    };
+  };
+};
+
+type ElementWithSetHTML = HTMLElement & {
+  setHTML?: (html: string) => void;
+};
+
+const sanitizeHtml = (html: string) => {
+  const documentCtor = (
+    globalThis as typeof globalThis & {
+      Document?: DocumentWithParseHTML;
+    }
+  ).Document;
+  if (typeof documentCtor?.parseHTML === "function") {
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API
+    return documentCtor.parseHTML(html).body.innerHTML;
+  }
+
+  if (typeof document !== "undefined") {
+    const container = document.createElement("div") as ElementWithSetHTML;
+    if (typeof container.setHTML === "function") {
+      container.setHTML(html);
+      return container.innerHTML;
+    }
+    container.textContent = html;
+    return container.innerHTML;
+  }
+
+  return "";
+};
+
+const renderMarkdown = (value: string) => sanitizeHtml(marked.parse(value) as string);
 
 export function ChatPanel(_props: IDockviewPanelProps) {
   const [value, setValue] = useState("");
@@ -16,13 +55,14 @@ export function ChatPanel(_props: IDockviewPanelProps) {
             <div
               className={
                 message.role === "user"
-                  ? "self-end rounded bg-cyan-900 px-3 py-2"
-                  : "self-start rounded bg-neutral-800 px-3 py-2"
+                  ? "content self-end rounded bg-cyan-900 px-3 py-2"
+                  : "content self-start rounded bg-neutral-800 px-3 py-2"
               }
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(message.content),
+              }}
               key={`${message.role}-${index}`}
-            >
-              {message.content}
-            </div>
+            />
           ))}
         </div>
       </div>
@@ -39,7 +79,10 @@ export function ChatPanel(_props: IDockviewPanelProps) {
               return;
             }
 
-            workspaceStore.actions.pushChatMessage({ role: "user", content: value.trim() });
+            workspaceStore.actions.pushChatMessage({
+              role: "user",
+              content: value.trim(),
+            });
             const message = value.trim();
             setValue("");
             await server?.streamChat(message);
