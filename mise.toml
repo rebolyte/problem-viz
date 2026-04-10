@@ -28,8 +28,8 @@ lint = "bunx oxlint ."
 fmt = "bunx oxfmt ."
 test = "bun test"
 "ts:check" = "tsc --noEmit"
-docker_build = "docker build -t teddygram:local ."
-docker_run = "docker run --rm -p 3000:3000 -v $(pwd)/data:/usr/src/app/data --env-file .env -e APP_ENV=prod teddygram:local"
+docker_build = "docker build -t loom:local ."
+docker_run = "docker run --rm -p 3000:3000 -v $(pwd)/data:/usr/src/app/data --env-file .env -e APP_ENV=prod loom:local"
 deploy = "bash ./scripts/deploy.sh"
 
 [tools]

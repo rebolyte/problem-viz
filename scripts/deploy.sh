@@ -4,7 +4,7 @@ set -euo pipefail
 # To be run from local machine
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-IMAGE_BASE="ghcr.io/rebolyte/teddygram"
+IMAGE_BASE="ghcr.io/rebolyte/loom"
 
 # Source .env for VPS credentials
 if [[ ! -f "$PROJECT_ROOT/.env" ]]; then

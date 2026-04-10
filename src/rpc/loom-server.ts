@@ -21,6 +21,8 @@ export interface LoomServerApi extends RpcTarget {
   saveWorkspace(): Promise<RpcResult<WorkspaceSnapshot>>;
   loadWorkspace(): Promise<RpcResult<WorkspaceSnapshot>>;
   listSnapshots(): Promise<RpcResult<string[]>>;
+  getLayout(): Promise<RpcResult<unknown>>;
+  setLayout(layout: unknown): Promise<RpcResult<void>>;
   listNodes(): Promise<RpcResult<GraphNode[]>>;
   addNode(input: CreateNodeInput): Promise<RpcResult<GraphNode>>;
   updateNode(id: string, input: UpdateNodeInput): Promise<RpcResult<GraphNode | null>>;

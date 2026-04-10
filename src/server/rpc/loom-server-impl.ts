@@ -79,6 +79,15 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
     return rpcOk<string[]>([]);
   }
 
+  async getLayout() {
+    const result = await this.deps.workspace.getLayout();
+    return result.isOk() ? rpcOk(result.value) : rpcErr(result.error);
+  }
+
+  async setLayout(layout: unknown) {
+    return toRpcResult(await this.deps.workspace.setLayout(layout));
+  }
+
   async listNodes() {
     return toRpcResult(await this.deps.store.listNodes());
   }

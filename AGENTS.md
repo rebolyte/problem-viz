@@ -138,3 +138,11 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+## Loom Architecture
+
+- Main thread React app owns the docked workspace shell, in-memory trace, and panel state
+- The sim engine runs in a dedicated Web Worker and talks to the main thread over `capnweb` `MessagePort` RPC
+- The Bun server owns SQLite-backed workspace persistence and exposes a `capnweb` WebSocket RPC endpoint
+- `src/engine/` stays pure TS so the same tick loop can run in the browser worker and future server-side verify flows
+- See [docs/loom-design-v3.md](docs/loom-design-v3.md) for the full design

@@ -3,6 +3,12 @@ declare module "*.png" {
   export default src;
 }
 
+declare global {
+  interface Window {
+    __loom?: Record<string, unknown>;
+  }
+}
+
 declare namespace Temporal {
   interface PlainDateTime {
     readonly year: number;
@@ -15,3 +21,5 @@ declare namespace Temporal {
     function plainDateTimeISO(): PlainDateTime;
   }
 }
+
+export {};

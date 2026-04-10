@@ -33,6 +33,6 @@ COPY --from=prerelease /usr/src/app/migrations ./migrations
 RUN mkdir -p /usr/src/app/data && chown bun:bun /usr/src/app/data
 
 USER bun
-ENV DATABASE_PATH=/usr/src/app/data/teddygram.db
+ENV DATABASE_PATH=/usr/src/app/data/workspace.sqlite
 EXPOSE 3000/tcp
 CMD ["sh", "-c", "bun migrate.ts && bun server.ts"]
