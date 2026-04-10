@@ -1,10 +1,13 @@
+import { nanoid } from "nanoid";
 import type { CreateEdgeInput, CreateNodeInput } from "../../server/graph/store.ts";
 
 export const buildCompoundInterestGraph = (): {
   nodes: CreateNodeInput[];
   edges: CreateEdgeInput[];
 } => {
-  const balanceId = "balance";
+  const seedId = nanoid();
+  const balanceId = `balance-${seedId}`;
+  const interestId = `interest-${seedId}`;
   const nodes: CreateNodeInput[] = [
     {
       id: balanceId,
@@ -20,7 +23,7 @@ export const buildCompoundInterestGraph = (): {
   ];
   const edges: CreateEdgeInput[] = [
     {
-      id: "interest",
+      id: interestId,
       sourceNode: balanceId,
       targetNode: balanceId,
       kind: "flow",

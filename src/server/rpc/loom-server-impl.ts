@@ -31,6 +31,12 @@ const rpcErr = (error: { message?: string; name?: string }): RpcResult<never> =>
 const toRpcResult = <T>(result: Result<T, { message?: string; name?: string }>): RpcResult<T> =>
   result.isOk() ? rpcOk(result.value) : rpcErr(result.error);
 
+const toLogError = (error: { message?: string; name?: string; cause?: unknown }) => ({
+  message: error.message ?? "Unknown error",
+  type: error.name,
+  cause: error.cause,
+});
+
 export class LoomServerImpl extends RpcTarget implements LoomServerApi {
   #client: RpcStub<LoomClientApi> | null = null;
 
@@ -76,8 +82,8 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
     return result.isOk() ? rpcOk(result.value) : rpcErr(result.error);
   }
 
-  async setLayout(layout: unknown) {
-    return toRpcResult(await this.deps.workspace.setLayout(layout));
+  async setLayout(layout: unknown): Promise<RpcResult<void>> {
+    return toRpcResult<void>(await this.deps.workspace.setLayout(layout));
   }
 
   async listNodes() {
@@ -85,15 +91,27 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
   }
 
   async addNode(input: Parameters<GraphStore["addNode"]>[0]) {
-    return toRpcResult(await this.deps.store.addNode(input));
+    const result = await this.deps.store.addNode(input);
+    if (!result.isOk()) {
+      void this.deps.log.warn`addNode failed ${{ input, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async updateNode(id: string, input: Parameters<GraphStore["updateNode"]>[1]) {
-    return toRpcResult(await this.deps.store.updateNode(id, input));
+    const result = await this.deps.store.updateNode(id, input);
+    if (!result.isOk()) {
+      void this.deps.log.warn`updateNode failed ${{ id, input, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async deleteNode(id: string) {
-    return toRpcResult(await this.deps.store.deleteNode(id));
+    const result = await this.deps.store.deleteNode(id);
+    if (!result.isOk()) {
+      void this.deps.log.warn`deleteNode failed ${{ id, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async listEdges() {
@@ -101,15 +119,27 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
   }
 
   async addEdge(input: Parameters<GraphStore["addEdge"]>[0]) {
-    return toRpcResult(await this.deps.store.addEdge(input));
+    const result = await this.deps.store.addEdge(input);
+    if (!result.isOk()) {
+      void this.deps.log.warn`addEdge failed ${{ input, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async updateEdge(id: string, input: Parameters<GraphStore["updateEdge"]>[1]) {
-    return toRpcResult(await this.deps.store.updateEdge(id, input));
+    const result = await this.deps.store.updateEdge(id, input);
+    if (!result.isOk()) {
+      void this.deps.log.warn`updateEdge failed ${{ id, input, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async deleteEdge(id: string) {
-    return toRpcResult(await this.deps.store.deleteEdge(id));
+    const result = await this.deps.store.deleteEdge(id);
+    if (!result.isOk()) {
+      void this.deps.log.warn`deleteEdge failed ${{ id, error: toLogError(result.error) }}`;
+    }
+    return toRpcResult(result);
   }
 
   async queryDownstream(id: string, hops?: number) {
@@ -120,8 +150,8 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
     return toRpcResult(await this.deps.store.upstreamOf(id, hops));
   }
 
-  async setProblemStatement(problemStatement: string) {
-    return toRpcResult(await this.deps.workspace.setProblemStatement(problemStatement));
+  async setProblemStatement(problemStatement: string): Promise<RpcResult<void>> {
+    return toRpcResult<void>(await this.deps.workspace.setProblemStatement(problemStatement));
   }
 
   async getProblemStatement() {
