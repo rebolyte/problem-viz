@@ -135,7 +135,7 @@ export const workspaceStore = {
     handleAgentEvent(event: AgentMessage) {
       setState((previous) => {
         if (event.type === "text") {
-          const text = event.text ?? "";
+          const text = event.text;
           const last = previous.chatMessages.at(-1);
           if (last?.role === "assistant") {
             return {

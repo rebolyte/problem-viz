@@ -133,6 +133,7 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
     const result = await this.deps.assistant.streamChat({
       chatId: "local",
       userMessage: message,
+      client: this.#client,
       onEvent: async (event) => {
         if (!this.#client) {
           return;

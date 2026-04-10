@@ -11,12 +11,11 @@ export type AgentMutation = {
   payload?: unknown;
 };
 
-export type AgentMessage = {
-  type: "text" | "tool" | "done";
-  text?: string;
-  name?: string;
-  input?: unknown;
-};
+export type AgentMessage =
+  | { type: "text"; text: string }
+  | { type: "tool"; name: string; input: unknown }
+  | { type: "tool_result"; name: string; result: unknown }
+  | { type: "done" };
 
 export interface LoomClientApi extends RpcTarget {
   onVerifyProgress(progress: VerifyProgress): Promise<void> | void;
