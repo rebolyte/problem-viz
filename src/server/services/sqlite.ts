@@ -6,6 +6,7 @@ export class BunSqliteDriver implements Driver {
 
   constructor(filename: string) {
     this.#db = new Database(filename);
+    this.#db.exec("PRAGMA journal_mode = WAL");
     this.#db.exec("PRAGMA foreign_keys = ON");
   }
 
