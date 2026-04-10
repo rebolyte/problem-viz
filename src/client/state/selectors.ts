@@ -1,4 +1,5 @@
 import type { GraphDef } from "../../engine/types.ts";
+import type { NodeSchemaV2 } from "../../engine/schema.ts";
 import type { WorkspaceState } from "./workspace-store.ts";
 
 export const currentSnapshot = (state: WorkspaceState) => state.trace[state.currentTick] ?? null;
@@ -13,7 +14,7 @@ export const toGraphDef = (state: WorkspaceState): GraphDef => ({
   nodes: state.nodes.map((node) => ({
     id: node.id,
     kind: node.kind,
-    schema: node.schema,
+    schema: node.schema as NodeSchemaV2,
     behavior: node.behavior ?? undefined,
     config: node.config,
     meta: node.meta,

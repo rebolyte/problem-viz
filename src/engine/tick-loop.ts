@@ -15,10 +15,9 @@ export async function* runSimulation(
         id: node.id,
         type: "node" as const,
         state: {
-          seed: opts.seed,
-          tick,
-          kind: node.kind,
-          rand: rand(),
+          kind: "tick",
+          context: { seed: opts.seed, tick, nodeKind: node.kind, rand: rand() },
+          outputs: {},
         },
       })),
     };

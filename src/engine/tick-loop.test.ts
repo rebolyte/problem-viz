@@ -20,8 +20,8 @@ describe("runSimulation", () => {
     const snapshots = await collectSnapshots(
       {
         nodes: [
-          { id: "tick-a", kind: "tick", schema: {}, config: {}, meta: {} },
-          { id: "tick-b", kind: "tick", schema: {}, config: {}, meta: {} },
+          { id: "tick-a", kind: "tick", schema: { config: {} }, config: {}, meta: {} },
+          { id: "tick-b", kind: "tick", schema: { config: {} }, config: {}, meta: {} },
         ],
         edges: [],
       },
@@ -34,7 +34,7 @@ describe("runSimulation", () => {
 
   it("is deterministic for the same seed and graph", async () => {
     const graph: GraphDef = {
-      nodes: [{ id: "node-a", kind: "stock", schema: {}, config: {}, meta: {} }],
+      nodes: [{ id: "node-a", kind: "stock", schema: { config: {} }, config: {}, meta: {} }],
       edges: [],
     };
 
@@ -46,7 +46,7 @@ describe("runSimulation", () => {
 
   it("threads the seeded prng into snapshot state", async () => {
     const graph: GraphDef = {
-      nodes: [{ id: "node-a", kind: "process", schema: {}, config: {}, meta: {} }],
+      nodes: [{ id: "node-a", kind: "process", schema: { config: {} }, config: {}, meta: {} }],
       edges: [],
     };
 

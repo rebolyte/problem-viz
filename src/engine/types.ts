@@ -1,3 +1,5 @@
+import type { NodeSchemaV2 } from "./schema.ts";
+
 export type NodeKind = "tick" | "stock" | "variable" | "process";
 
 export type EdgeKind =
@@ -9,12 +11,10 @@ export type EdgeKind =
   | "causation"
   | "custom";
 
-export type NodeSchema = Record<string, unknown>;
-
 export type NodeDef = {
   id: string;
   kind: NodeKind;
-  schema: NodeSchema;
+  schema: NodeSchemaV2;
   behavior?: string;
   config: Record<string, unknown>;
   meta: Record<string, unknown>;
@@ -42,9 +42,17 @@ export type RunConfig = {
   configOverrides?: Record<string, Record<string, unknown>>;
 };
 
+export type EntityState =
+  | { kind: "tick"; context: unknown; outputs: Record<string, unknown> }
+  | { kind: "stock"; value: number }
+  | { kind: "variable"; value: number }
+  | { kind: "process"; suspended: true }
+  | { kind: "flow"; rate: number }
+  | { kind: "channel"; pending: number };
+
 export type TickSnapshot = {
   tick: number;
-  entities: Array<{ id: string; type: "node" | "edge"; state: unknown }>;
+  entities: Array<{ id: string; type: "node" | "edge"; state: EntityState }>;
 };
 
 export type Trace = TickSnapshot[];
