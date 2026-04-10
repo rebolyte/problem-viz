@@ -4,12 +4,6 @@ import type { WorkspaceState } from "./workspace-store.ts";
 
 export const currentSnapshot = (state: WorkspaceState) => state.trace[state.currentTick] ?? null;
 
-export const chartData = (state: WorkspaceState) =>
-  state.trace.map((snapshot) => ({
-    tick: snapshot.tick,
-    v: snapshot.entities.length,
-  }));
-
 export const toGraphDef = (state: WorkspaceState): GraphDef => ({
   nodes: state.nodes.map((node) => ({
     id: node.id,
