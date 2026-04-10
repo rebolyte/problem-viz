@@ -1,6 +1,6 @@
 # Loom: A Problem Visualization Toolkit
 
-*"If you do not have a visualization for a problem, you will never solve it."*
+_"If you do not have a visualization for a problem, you will never solve it."_
 
 ## One-Liner
 
@@ -10,7 +10,7 @@ An interactive simulation canvas where humans and agents collaboratively model, 
 
 ## Core Concept
 
-Loom is not a diagramming tool. It is a **simulation runtime with a visual frontend**. The graph isn't a picture — the nodes *run*. They hold state, emit events, react to inputs. Edges carry data between them — and can transform, delay, or drop it. You scrub through time and watch the system evolve, rewind to any tick, change a node's behavior, and replay forward to see the consequences cascade. Or you declare properties the system must satisfy and throw 10,000 seeds at it to find where it breaks.
+Loom is not a diagramming tool. It is a **simulation runtime with a visual frontend**. The graph isn't a picture — the nodes _run_. They hold state, emit events, react to inputs. Edges carry data between them — and can transform, delay, or drop it. You scrub through time and watch the system evolve, rewind to any tick, change a node's behavior, and replay forward to see the consequences cascade. Or you declare properties the system must satisfy and throw 10,000 seeds at it to find where it breaks.
 
 The graph is the shared source of truth. Humans see it through an interactive canvas. Agents see it through a programmatic API. Both can read, write, query, and mutate the model. A living **Problem Statement** steers the workspace, updated collaboratively — like a system prompt for the entire visualization.
 
@@ -107,19 +107,20 @@ A pure function called every tick. Takes immutable context, returns new state an
 
 ```typescript
 const trafficLight = defineNode({
-  kind: 'tick',
+  kind: "tick",
   schema: {
-    context: {} as { phase: 'green' | 'yellow' | 'red'; timer: number },
-    inputs: { emergency: 'boolean' },
-    outputs: { signal: 'string' },
-    config: { greenDuration: 'number', yellowDuration: 'number', redDuration: 'number' },
+    context: {} as { phase: "green" | "yellow" | "red"; timer: number },
+    inputs: { emergency: "boolean" },
+    outputs: { signal: "string" },
+    config: { greenDuration: "number", yellowDuration: "number", redDuration: "number" },
   },
-  init: (config) => ({ phase: 'green', timer: config.greenDuration }),
+  init: (config) => ({ phase: "green", timer: config.greenDuration }),
   tick({ state, inputs, config, tick, rand }) {
-    if (inputs.emergency) return { state: { phase: 'red', timer: 0 }, outputs: { signal: 'red' } };
-    if (state.timer > 0) return { state: { ...state, timer: state.timer - 1 }, outputs: { signal: state.phase } };
+    if (inputs.emergency) return { state: { phase: "red", timer: 0 }, outputs: { signal: "red" } };
+    if (state.timer > 0)
+      return { state: { ...state, timer: state.timer - 1 }, outputs: { signal: state.phase } };
     // Cycle to next phase
-    const next = { green: 'yellow', yellow: 'red', red: 'green' } as const;
+    const next = { green: "yellow", yellow: "red", red: "green" } as const;
     const nextPhase = next[state.phase];
     const duration = config[`${nextPhase}Duration`];
     return { state: { phase: nextPhase, timer: duration }, outputs: { signal: nextPhase } };
@@ -135,9 +136,9 @@ Accumulate values based on inflow/outflow rates defined as expressions. Best for
 
 ```typescript
 const savings = defineNode({
-  kind: 'stock',
+  kind: "stock",
   schema: {
-    config: { initialBalance: 'number' },
+    config: { initialBalance: "number" },
   },
   initial: (config) => config.initialBalance,
   // Flows are defined as edges, not code inside the node.
@@ -146,8 +147,8 @@ const savings = defineNode({
 });
 
 const salary = defineNode({
-  kind: 'variable',  // A constant or expression, not a stock
-  schema: { config: { amount: 'number' } },
+  kind: "variable", // A constant or expression, not a stock
+  schema: { config: { amount: "number" } },
   value: (config) => config.amount,
 });
 
@@ -164,12 +165,12 @@ Generator/async functions that yield to wait for events or durations. Best for m
 
 ```typescript
 const wsClient = defineNode({
-  kind: 'process',
+  kind: "process",
   schema: {
     context: {} as { seq: number; connected: boolean; buffer: unknown[] },
-    inputs: { serverMsg: 'json' },
-    outputs: { clientMsg: 'json' },
-    config: { retryAfter: 'number', disconnectAtTick: 'number' },
+    inputs: { serverMsg: "json" },
+    outputs: { clientMsg: "json" },
+    config: { retryAfter: "number", disconnectAtTick: "number" },
   },
   async *run({ ctx, config, receive, emit, wait, tick }) {
     ctx.seq = 0;
@@ -181,12 +182,12 @@ const wsClient = defineNode({
         break;
       }
       ctx.seq++;
-      emit('clientMsg', { type: 'data', seq: ctx.seq });
+      emit("clientMsg", { type: "data", seq: ctx.seq });
 
       // Wait for ack or timeout — yields control back to engine
-      const response = yield wait.for('serverMsg', config.retryAfter);
+      const response = yield wait.for("serverMsg", config.retryAfter);
       if (!response) {
-        emit('clientMsg', { type: 'retry', seq: ctx.seq });
+        emit("clientMsg", { type: "retry", seq: ctx.seq });
       }
     }
   },
@@ -208,6 +209,7 @@ The engine handles the scheduling: stocks integrate flows, tick nodes run their 
 ### Node Authoring
 
 Nodes are authored by:
+
 1. **Writing TypeScript directly** — full control, any archetype
 2. **Describing behavior in natural language** → agent generates the code using the `defineNode` API
 3. **Selecting from a library of built-in archetypes** — pre-built nodes for common patterns: event emitter, state machine, accumulator, queue, counter, timer, etc.
@@ -230,9 +232,9 @@ Edges with behavior: delay, loss, rate-limiting, transformation, rate expression
 
 ```typescript
 const unreliableChannel = defineEdge({
-  kind: 'channel',
+  kind: "channel",
   schema: {
-    config: { latency: 'number', lossRate: 'number' },
+    config: { latency: "number", lossRate: "number" },
     state: {} as { buffer: Array<{ msg: unknown; deliverAt: number }> },
   },
   tick({ state, pending, config, tick, rand }) {
@@ -243,9 +245,9 @@ const unreliableChannel = defineEdge({
       }
     }
     // Deliver what's ready
-    const ready = state.buffer.filter(m => m.deliverAt <= tick);
-    state.buffer = state.buffer.filter(m => m.deliverAt > tick);
-    return { state, deliver: ready.map(m => m.msg) };
+    const ready = state.buffer.filter((m) => m.deliverAt <= tick);
+    state.buffer = state.buffer.filter((m) => m.deliverAt > tick);
+    return { state, deliver: ready.map((m) => m.msg) };
   },
 });
 ```
@@ -256,9 +258,9 @@ A special coded edge for stock-to-stock flows. The rate is a TypeScript function
 
 ```typescript
 const investmentReturn = defineEdge({
-  kind: 'flow',
+  kind: "flow",
   schema: {
-    config: { annualReturn: 'number' },
+    config: { annualReturn: "number" },
   },
   // source.value is the current stock value, strongly typed
   rate({ source, config }) {
@@ -267,9 +269,9 @@ const investmentReturn = defineEdge({
 });
 
 const savingsDeposit = defineEdge({
-  kind: 'flow',
+  kind: "flow",
   schema: {
-    config: { savingsRate: 'number' },
+    config: { savingsRate: "number" },
   },
   // source is the upstream node (e.g. salary variable)
   rate({ source, config }) {
@@ -305,38 +307,40 @@ const workspace = defineWorkspace({
   properties: {
     // INVARIANT — must hold at every tick of every run
     noMessageLoss: {
-      kind: 'invariant',
+      kind: "invariant",
       check: ({ nodes }) =>
         nodes.server.state.received.length >=
         nodes.client.state.sent.length - nodes.channel.state.inFlight.length,
-      description: 'Server has received all messages not currently in flight',
+      description: "Server has received all messages not currently in flight",
     },
 
     // LIVENESS — must hold eventually (by a specified tick)
     sequenceConverges: {
-      kind: 'liveness',
+      kind: "liveness",
       by: 100,
-      check: ({ nodes }) =>
-        nodes.client.state.seq === nodes.server.state.lastAcked,
-      description: 'Client and server agree on sequence number by tick 100',
+      check: ({ nodes }) => nodes.client.state.seq === nodes.server.state.lastAcked,
+      description: "Client and server agree on sequence number by tick 100",
     },
 
     // STATISTICAL — property of the distribution across runs, not a single run
     p99Latency: {
-      kind: 'statistical',
+      kind: "statistical",
       check: ({ runs }) =>
-        percentile(runs.map(r => r.metrics.maxLatency), 99) < 50,
-      description: 'P99 max latency across runs is under 50 ticks',
+        percentile(
+          runs.map((r) => r.metrics.maxLatency),
+          99,
+        ) < 50,
+      description: "P99 max latency across runs is under 50 ticks",
     },
 
     // STATISTICAL — ruin probability for financial models
     ruinProbability: {
-      kind: 'statistical',
+      kind: "statistical",
       check: ({ runs }) => {
-        const ruined = runs.filter(r => r.finalState.nodes.netWorth.value <= 0);
+        const ruined = runs.filter((r) => r.finalState.nodes.netWorth.value <= 0);
         return ruined.length / runs.length < 0.05;
       },
-      description: 'Probability of ruin (net worth ≤ 0) is under 5%',
+      description: "Probability of ruin (net worth ≤ 0) is under 5%",
     },
   },
 });
@@ -346,9 +350,9 @@ const workspace = defineWorkspace({
 
 **Invariants** — must hold at every tick of every run. These are safety properties. "No node holds a lock it didn't acquire." "Account balance never goes negative." "Server has received all non-in-flight messages." The verifier checks after every tick and fails fast on violation.
 
-**Liveness / Convergence** — must hold *eventually*, by a specified tick or by end of run. "All peers agree on the leader by tick N." "The system drains its message queue before termination." The verifier checks at the specified tick and reports failure if the predicate is false.
+**Liveness / Convergence** — must hold _eventually_, by a specified tick or by end of run. "All peers agree on the leader by tick N." "The system drains its message queue before termination." The verifier checks at the specified tick and reports failure if the predicate is false.
 
-**Statistical** — properties of the *distribution* across runs, not any single run. "P99 latency under 50 ticks." "Bankruptcy probability under 5% across 10k FIRE simulations." "Mean throughput within 10% of theoretical maximum." These are evaluated after all seeds complete. This is where the DCF model and FIRE projections become genuinely useful — not "what happens with WACC=8%" but "what's my ruin probability across a distribution of market conditions."
+**Statistical** — properties of the _distribution_ across runs, not any single run. "P99 latency under 50 ticks." "Bankruptcy probability under 5% across 10k FIRE simulations." "Mean throughput within 10% of theoretical maximum." These are evaluated after all seeds complete. This is where the DCF model and FIRE projections become genuinely useful — not "what happens with WACC=8%" but "what's my ruin probability across a distribution of market conditions."
 
 ### Batch Runner
 
@@ -382,6 +386,7 @@ The shrinker produces a minimal failing case that can be loaded directly into th
 ### Investigate: From Failure to Understanding
 
 The minimal reproduction loads into the explorer with:
+
 - The scrubber parked at the failing tick
 - The violated property highlighted in the UI
 - Failing nodes/edges visually marked (red glow, expanded state panel)
@@ -405,16 +410,16 @@ The agent can participate in the full verify cycle:
 
 A lens is a rendering strategy that maps the graph (or a subgraph) to a visual representation. The tool ships with built-in lenses and supports custom ones:
 
-| Lens | Good for | Renders as |
-|------|----------|------------|
-| **State Matrix** | Protocol design, game theory | Grid of (entity_A_state × entity_B_state) with action/outcome per cell |
-| **Timeline / Sequence** | Distributed systems, message protocols | Vertical swimlanes with messages as arrows, scrubber for time |
-| **DAG** | Project management (PERT), dependency graphs | Directed graph with critical path highlighting |
-| **Flow** | Data pipelines, n8n-style workflows | Left-to-right dataflow with animated data on edges |
-| **Plot / Chart** | Financial projections, metrics over time | Line/bar charts of node state properties over ticks |
-| **Distribution** | Verification results, Monte Carlo | Histograms, CDFs, scatter plots across seeds |
-| **Topology** | Network architecture, system design | Spatial layout of nodes with connection types |
-| **Custom** | Anything | User-defined React component that receives graph + trace data |
+| Lens                    | Good for                                     | Renders as                                                             |
+| ----------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| **State Matrix**        | Protocol design, game theory                 | Grid of (entity_A_state × entity_B_state) with action/outcome per cell |
+| **Timeline / Sequence** | Distributed systems, message protocols       | Vertical swimlanes with messages as arrows, scrubber for time          |
+| **DAG**                 | Project management (PERT), dependency graphs | Directed graph with critical path highlighting                         |
+| **Flow**                | Data pipelines, n8n-style workflows          | Left-to-right dataflow with animated data on edges                     |
+| **Plot / Chart**        | Financial projections, metrics over time     | Line/bar charts of node state properties over ticks                    |
+| **Distribution**        | Verification results, Monte Carlo            | Histograms, CDFs, scatter plots across seeds                           |
+| **Topology**            | Network architecture, system design          | Spatial layout of nodes with connection types                          |
+| **Custom**              | Anything                                     | User-defined React component that receives graph + trace data          |
 
 Multiple lenses can be active simultaneously in split panes. The agent can suggest lenses based on graph structure and the problem statement.
 
@@ -425,6 +430,7 @@ The **Distribution lens** is new — it only activates in verify mode and shows 
 ## Problem Statement
 
 A persistent, editable text block at the workspace level. Functions as:
+
 - Context for the agent (like a system prompt)
 - Steering for lens suggestions ("I need to understand capacity over time" → plot lens, DAG lens)
 - Documentation for the model's purpose
@@ -477,6 +483,7 @@ loom lens activate <lens> [--config=<json>]
 A property graph (nodes and edges with typed properties). Implementation for V1: in-memory TypeScript data structure, serialized to JSON on disk.
 
 Every node has:
+
 - `id: string`
 - `kind: 'tick' | 'stock' | 'variable' | 'process'`
 - `schema: NodeSchema` (typed inputs, outputs, config, context)
@@ -485,6 +492,7 @@ Every node has:
 - `properties: Record<string, unknown>` (metadata, display properties)
 
 Every edge has:
+
 - `id: string`
 - `source: string` (node id + optional port name)
 - `target: string` (node id + optional port name)
@@ -561,6 +569,7 @@ Every panel is a Dockview panel — users can drag, dock, float, pop out to sepa
 Inline code editing uses CodeMirror (not Monaco) — lighter weight, better extensibility, composition-friendly for embedding in floating panels and inline node editing. Configured with TypeScript language support and completions for the `defineNode` / `defineEdge` API.
 
 Code editors appear as:
+
 - **Floating panel**: click a node on the canvas → CodeMirror panel floats over the canvas. Drag to dock it if you want it persistent.
 - **Inline on node**: small code preview directly on the canvas node, click to expand into full editor.
 - **Docked panel**: drag the floating editor to any edge to dock it alongside the canvas, lens panels, etc.
@@ -595,6 +604,7 @@ The system auto-generates the appropriate control: sliders for numbers (with min
 ### Pinning
 
 Not every config field needs a persistent slider — 40 sliders is noise. Controls are pinned to the Control Panel by:
+
 - **Human**: drag a config field from a node's inspector to the Control Panel
 - **Agent**: "these are the key parameters for your problem statement" → agent pins the relevant controls
 - **Auto-suggest**: the agent can analyze the problem statement and graph structure to suggest which controls to pin
@@ -605,8 +615,11 @@ Sometimes you want a single knob that adjusts multiple parameters. Derived contr
 
 ```typescript
 defineControl({
-  name: 'Risk Tolerance',
-  type: 'number', min: 0, max: 1, step: 0.1,
+  name: "Risk Tolerance",
+  type: "number",
+  min: 0,
+  max: 1,
+  step: 0.1,
   apply(value, graph) {
     graph.nodes.portfolio.config.returnRate = 0.04 + value * 0.12;
     graph.nodes.portfolio.config.volatility = 0.05 + value * 0.25;
@@ -623,23 +636,25 @@ When you drag a slider, the simulation re-runs from tick 0 (or from the current 
 
 ### Control Types
 
-| Schema type | Control | Behavior on change |
-|-------------|---------|-------------------|
-| `number` with min/max | Slider | Re-simulate from current rewind point |
-| `number` without bounds | Number input | Re-simulate on blur/enter |
-| `boolean` | Toggle | Re-simulate immediately |
-| `enum` | Dropdown | Re-simulate on selection |
-| `Derived` | Slider/custom | Applies function, then re-simulates |
-| `Seed` | Number input | Re-simulate with new seed |
+| Schema type             | Control       | Behavior on change                    |
+| ----------------------- | ------------- | ------------------------------------- |
+| `number` with min/max   | Slider        | Re-simulate from current rewind point |
+| `number` without bounds | Number input  | Re-simulate on blur/enter             |
+| `boolean`               | Toggle        | Re-simulate immediately               |
+| `enum`                  | Dropdown      | Re-simulate on selection              |
+| `Derived`               | Slider/custom | Applies function, then re-simulates   |
+| `Seed`                  | Number input  | Re-simulate with new seed             |
 
 ---
 
 ## V1 Scope
 
 ### Target user
+
 James, working on SDLC / system design / basic finance problems.
 
 ### Tech stack
+
 - **UI framework**: React + Dockview (panel windowing/docking) + UnoCSS (styling)
 - **Canvas**: React Flow (node graph with custom animated SVG edges)
 - **Code editor**: CodeMirror (inline/floating code editing with TypeScript support)
@@ -651,6 +666,7 @@ James, working on SDLC / system design / basic finance problems.
 - **Agent integration**: CLI + MCP server for Claude Code / Claude chat
 
 ### What V1 must do
+
 1. Define a graph with typed nodes (all three archetypes) and edges (passthrough + coded) through the canvas or the agent API
 2. Write or generate node/edge behavior as TypeScript functions via embedded CodeMirror editor
 3. Run a discrete deterministic simulation and capture full state traces
@@ -668,6 +684,7 @@ James, working on SDLC / system design / basic finance problems.
 15. Agent can query, mutate, simulate, and verify through CLI
 
 ### What V1 does not do
+
 - Statistical properties across runs (V1 verifies per-run properties; statistical aggregation is V2)
 - Distribution lens (requires statistical properties)
 - Branching timelines or side-by-side comparison (manual via separate windows)
@@ -688,6 +705,7 @@ James, working on SDLC / system design / basic finance problems.
 Model client and server as **process nodes** with sequential connect/send/ack/retry behavior. Communication channel as a **coded edge** with configurable latency and loss. State matrix lens for (client_state × server_state) pairs. Timeline lens for message sequence.
 
 **Properties:**
+
 - Invariant: server received count >= client sent count minus in-flight count
 - Liveness: client and server agree on sequence number by tick 100
 - Invariant: no duplicate message delivery
@@ -699,6 +717,7 @@ Model client and server as **process nodes** with sequential connect/send/ack/re
 Tasks as **tick nodes** with duration and resource requirements. Dependencies as **structural edges**. Resource pool as a **stock node** (available developer-hours). DAG lens with critical path highlighting. Plot lens for resource utilization over time.
 
 **Properties:**
+
 - Invariant: no task starts before all dependencies complete
 - Liveness: all tasks complete by deadline tick
 - Statistical (V2): P90 project duration across runs with stochastic task durations
@@ -708,6 +727,7 @@ Tasks as **tick nodes** with duration and resource requirements. Dependencies as
 Income, expenses, investments as **stock nodes**. Salary, savings rate, return rate as **variable nodes**. Money flows as **flow edges** with typed rate functions (e.g. `rate({ source, config }) => source.value * config.savingsRate`). Plot lens for net worth, portfolio value, passive income over time.
 
 **Properties:**
+
 - Invariant: no negative account balances (or flag if this happens)
 - Liveness: passive income exceeds expenses by tick N (FIRE number reached)
 - Statistical (V2): ruin probability under 5% across 10k seeds with stochastic market returns
@@ -719,6 +739,7 @@ Income, expenses, investments as **stock nodes**. Salary, savings rate, return r
 Intersections as **tick nodes** (traffic light state machines). Cars as **process nodes** (drive to A, wait for green, drive to B). Roads as **coded edges** with travel time based on speed limit and congestion. Topology lens for the road network. Plot lens for throughput per intersection.
 
 **Properties:**
+
 - Invariant: no two conflicting green signals at same intersection
 - Liveness: all cars reach destination within 200 ticks
 - Statistical (V2): mean commute time under threshold
@@ -728,6 +749,7 @@ Intersections as **tick nodes** (traffic light state machines). Cars as **proces
 Revenue, OpEx, CapEx, tax as **stock/variable nodes**. Free cash flow as a **variable** node: `[Revenue] - [OpEx] - [CapEx] - [Tax]`. Discount factor as a variable: `1 / (1 + [WACC]) ^ [tick]`. NPV as a **stock** accumulating `[FCF] * [DiscountFactor]` each period. Terminal value plugs in at final tick.
 
 **Properties:**
+
 - Invariant: FCF calculation is consistent (sum of parts = total)
 - Liveness: model reaches terminal value calculation
 
@@ -738,6 +760,7 @@ Revenue, OpEx, CapEx, tax as **stock/variable nodes**. Free cash flow as a **var
 ## What Loom Handles Well vs. Not
 
 ### Strong fit
+
 - Distributed systems and protocols
 - System dynamics (stocks, flows, feedback loops)
 - Financial modeling and projections
@@ -750,12 +773,14 @@ Revenue, OpEx, CapEx, tax as **stock/variable nodes**. Free cash flow as a **var
 - Predator-prey and population dynamics
 
 ### Workable with known limitations
+
 - **Load balancing / autoscaling**: needs dynamic node creation (not in V1, use pre-allocated inactive nodes)
 - **Large network routing**: 1000s of nodes stress React Flow rendering and snapshot storage
 - **Cellular automata**: needs spatial grid primitive, not graph nodes (out of scope for V1)
 - **Monte Carlo sampling**: works for property verification, but not designed as a general batch computation framework
 
 ### Wrong tool
+
 - **Continuous physics** (fluid dynamics, orbital mechanics): needs adaptive step sizes and PDE solvers
 - **Analog circuit simulation**: needs simultaneous equation solving (SPICE), not independent tick functions
 - **Optimization / search** (TSP, constraint satisfaction): needs solution space exploration, not single-path simulation
@@ -767,21 +792,21 @@ Revenue, OpEx, CapEx, tax as **stock/variable nodes**. Free cash flow as a **var
 
 ## Influences
 
-| Source | What to take |
-|--------|-------------|
-| **Bret Victor** | Direct manipulation, immediate feedback, scrubbing through time |
-| **TLA+** (Lamport) | Temporal logic, safety/liveness properties, specification-first thinking |
-| **Braid** (Blow) | Rewind-and-modify as a core mechanic, deterministic replay |
-| **fast-check / QuickCheck** | Property declarations, seed-based verification, shrinking to minimal reproductions |
-| **Donella Meadows** | Systems thinking, stocks & flows, feedback loops, leverage points |
-| **Daniel Dennett** | Thinking tools, intuition pumps, making the implicit explicit |
-| **Factorio / SimCity** | Emergent complexity from simple rules, visual feedback on throughput |
-| **n8n / Node-RED** | Dataflow graph as UI, nodes with behavior, visual wiring, message passing |
-| **SimPy** | Process-based simulation, generator functions for sequential wait-based behavior |
-| **Mesa** | Agent-based tick/step model, scheduler, data collection, hybrid event scheduling |
-| **XState v5** | Actor model, typed state machines, `setup()` pattern for schema declaration |
-| **System dynamics** (Vensim, Stella) | Stocks, flows, rate expressions, visual integration |
-| **Mathematica** | Notebook-style exploration, symbolic + numeric, instant visualization |
-| **Seve (autorouter)** | Visualize the problem first, animate iterations, cache pre-solved subproblems |
-| **Tufte** | Right representation for the data, information density, no chart junk |
-| **Transformer architecture** | Attention as a lens — what is this node "attending to"? |
+| Source                               | What to take                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------- |
+| **Bret Victor**                      | Direct manipulation, immediate feedback, scrubbing through time                    |
+| **TLA+** (Lamport)                   | Temporal logic, safety/liveness properties, specification-first thinking           |
+| **Braid** (Blow)                     | Rewind-and-modify as a core mechanic, deterministic replay                         |
+| **fast-check / QuickCheck**          | Property declarations, seed-based verification, shrinking to minimal reproductions |
+| **Donella Meadows**                  | Systems thinking, stocks & flows, feedback loops, leverage points                  |
+| **Daniel Dennett**                   | Thinking tools, intuition pumps, making the implicit explicit                      |
+| **Factorio / SimCity**               | Emergent complexity from simple rules, visual feedback on throughput               |
+| **n8n / Node-RED**                   | Dataflow graph as UI, nodes with behavior, visual wiring, message passing          |
+| **SimPy**                            | Process-based simulation, generator functions for sequential wait-based behavior   |
+| **Mesa**                             | Agent-based tick/step model, scheduler, data collection, hybrid event scheduling   |
+| **XState v5**                        | Actor model, typed state machines, `setup()` pattern for schema declaration        |
+| **System dynamics** (Vensim, Stella) | Stocks, flows, rate expressions, visual integration                                |
+| **Mathematica**                      | Notebook-style exploration, symbolic + numeric, instant visualization              |
+| **Seve (autorouter)**                | Visualize the problem first, animate iterations, cache pre-solved subproblems      |
+| **Tufte**                            | Right representation for the data, information density, no chart junk              |
+| **Transformer architecture**         | Attention as a lens — what is this node "attending to"?                            |

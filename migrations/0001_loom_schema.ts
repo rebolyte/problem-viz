@@ -37,8 +37,18 @@ export async function up(db: Kysely<any>): Promise<void> {
       )
       .addColumn("schema", "text", (col) => col.notNull().check(sql`json_valid(schema)`))
       .addColumn("behavior", "text")
-      .addColumn("config", "text", (col) => col.notNull().defaultTo("{}").check(sql`json_valid(config)`))
-      .addColumn("meta", "text", (col) => col.notNull().defaultTo("{}").check(sql`json_valid(meta)`))
+      .addColumn("config", "text", (col) =>
+        col
+          .notNull()
+          .defaultTo("{}")
+          .check(sql`json_valid(config)`),
+      )
+      .addColumn("meta", "text", (col) =>
+        col
+          .notNull()
+          .defaultTo("{}")
+          .check(sql`json_valid(meta)`),
+      )
       .addColumn("created_at", "text", (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
       .execute();
 
@@ -46,18 +56,34 @@ export async function up(db: Kysely<any>): Promise<void> {
       .createTable("edges")
       .ifNotExists()
       .addColumn("id", "text", (col) => col.primaryKey())
-      .addColumn("source_node", "text", (col) => col.notNull().references("nodes.id").onDelete("cascade"))
+      .addColumn("source_node", "text", (col) =>
+        col.notNull().references("nodes.id").onDelete("cascade"),
+      )
       .addColumn("source_port", "text")
-      .addColumn("target_node", "text", (col) => col.notNull().references("nodes.id").onDelete("cascade"))
+      .addColumn("target_node", "text", (col) =>
+        col.notNull().references("nodes.id").onDelete("cascade"),
+      )
       .addColumn("target_port", "text")
       .addColumn("kind", "text", (col) =>
-        col.notNull().check(
-          sql`kind IN ('passthrough', 'channel', 'flow', 'dependency', 'ownership', 'causation', 'custom')`,
-        ),
+        col
+          .notNull()
+          .check(
+            sql`kind IN ('passthrough', 'channel', 'flow', 'dependency', 'ownership', 'causation', 'custom')`,
+          ),
       )
       .addColumn("behavior", "text")
-      .addColumn("config", "text", (col) => col.notNull().defaultTo("{}").check(sql`json_valid(config)`))
-      .addColumn("meta", "text", (col) => col.notNull().defaultTo("{}").check(sql`json_valid(meta)`))
+      .addColumn("config", "text", (col) =>
+        col
+          .notNull()
+          .defaultTo("{}")
+          .check(sql`json_valid(config)`),
+      )
+      .addColumn("meta", "text", (col) =>
+        col
+          .notNull()
+          .defaultTo("{}")
+          .check(sql`json_valid(meta)`),
+      )
       .addColumn("created_at", "text", (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
       .execute();
 
@@ -104,7 +130,12 @@ export async function up(db: Kysely<any>): Promise<void> {
       )
       .addColumn("description", "text")
       .addColumn("check_source", "text", (col) => col.notNull())
-      .addColumn("config", "text", (col) => col.notNull().defaultTo("{}").check(sql`json_valid(config)`))
+      .addColumn("config", "text", (col) =>
+        col
+          .notNull()
+          .defaultTo("{}")
+          .check(sql`json_valid(config)`),
+      )
       .execute();
   });
 }

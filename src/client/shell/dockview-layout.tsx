@@ -1,4 +1,9 @@
-import { DockviewReact, type DockviewApi, type DockviewReadyEvent, type IDockviewPanelProps } from "dockview-react";
+import {
+  DockviewReact,
+  type DockviewApi,
+  type DockviewReadyEvent,
+  type IDockviewPanelProps,
+} from "dockview-react";
 import { useEffect, useMemo, useRef } from "react";
 import { CanvasPanel } from "./canvas-panel.tsx";
 import { ChatPanel } from "./chat-panel.tsx";

@@ -49,10 +49,7 @@ const api = new Hono<HonoEnv>();
 export const makeApiRoutes = () => {
   api.all("/rpc", async (c) => {
     const request = c.req.raw;
-    const response = await newHttpBatchRpcResponse(
-      request,
-      new ExampleRpcService(),
-    );
+    const response = await newHttpBatchRpcResponse(request, new ExampleRpcService());
     response.headers.set("Access-Control-Allow-Origin", "*");
     return response;
   });
@@ -95,10 +92,7 @@ const Layout = (props: LayoutProps) => (
         }}
       />
       {/* deno-fmt-ignore */}
-      <script
-        defer
-        src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-      />
+      <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" />
     </head>
     <body>
       <div class="container">{props.children}</div>
@@ -181,12 +175,7 @@ api.get("/dashboard", (c) => {
           RPC Greeting <span class="badge">Cap'n Web Client</span>
         </h2>
         <div>
-          <input
-            type="text"
-            x-model="name"
-            placeholder="Enter name"
-            style="width: 200px;"
-          />
+          <input type="text" x-model="name" placeholder="Enter name" style="width: 200px;" />
           <button
             x-on:click={`
               window.rpc('hello', name)
@@ -253,10 +242,7 @@ api.get("/dashboard", (c) => {
       </div>
 
       {/* Batch Processing */}
-      <div
-        class="card"
-        x-data="{ items: ['hello', 'world', 'deno'], processed: null }"
-      >
+      <div class="card" x-data="{ items: ['hello', 'world', 'deno'], processed: null }">
         <h2>
           RPC Batch Processing <span class="badge">Cap'n Web Client</span>
         </h2>
@@ -277,27 +263,13 @@ api.get("/dashboard", (c) => {
       </div>
 
       {/* User Creation - Demonstrates shared types */}
-      <div
-        class="card"
-        x-data="{ name: 'Alice', email: 'alice@example.com', user: null }"
-      >
+      <div class="card" x-data="{ name: 'Alice', email: 'alice@example.com', user: null }">
         <h2>
-          Create User (Typed RPC){" "}
-          <span class="badge">Cap'n Web + Shared Types</span>
+          Create User (Typed RPC) <span class="badge">Cap'n Web + Shared Types</span>
         </h2>
         <div>
-          <input
-            type="text"
-            x-model="name"
-            placeholder="Name"
-            style="width: 150px;"
-          />
-          <input
-            type="email"
-            x-model="email"
-            placeholder="Email"
-            style="width: 200px;"
-          />
+          <input type="text" x-model="name" placeholder="Name" style="width: 150px;" />
+          <input type="email" x-model="email" placeholder="Email" style="width: 200px;" />
           <button
             x-on:click={`
               window.rpc('createUser', name, email)
@@ -335,12 +307,7 @@ api.get("/dashboard", (c) => {
           Todo Manager <span class="badge">Cap'n Web + Complex Types</span>
         </h2>
         <div style="margin-bottom: 1rem;">
-          <input
-            type="text"
-            x-model="title"
-            placeholder="Todo title"
-            style="width: 200px;"
-          />
+          <input type="text" x-model="title" placeholder="Todo title" style="width: 200px;" />
           <select
             x-model="priority"
             style="padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 0.5rem; margin-right: 0.5rem;"
@@ -382,10 +349,7 @@ api.get("/dashboard", (c) => {
                 x-text="' [' + todo.priority + ']'"
                 style="font-size: 0.875rem; color: #666;"
               ></span>
-              <span
-                x-show="todo.completed"
-                style="color: green; margin-left: 0.5rem;"
-              >
+              <span x-show="todo.completed" style="color: green; margin-left: 0.5rem;">
                 ✓ Done
               </span>
             </div>

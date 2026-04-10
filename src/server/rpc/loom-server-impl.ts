@@ -1,10 +1,7 @@
 import { Result } from "better-result";
 import { type RpcStub, RpcTarget } from "capnweb";
 import type { LoomClientApi } from "../../rpc/loom-client.ts";
-import type {
-  LoomServerApi,
-  WorkspaceSnapshot,
-} from "../../rpc/loom-server.ts";
+import type { LoomServerApi, WorkspaceSnapshot } from "../../rpc/loom-server.ts";
 import type { RpcResult } from "../../rpc/result.ts";
 import type { AssistantDomain } from "../domains/assistant/index.ts";
 import type { GraphStore } from "../graph/store.ts";
@@ -23,9 +20,7 @@ type LoomServerDeps = {
 // serializable result shape while keeping Result inside the server modules.
 const rpcOk = <T>(value: T): RpcResult<T> => ({ ok: true, value });
 
-const rpcErr = (
-  error: { message?: string; name?: string },
-): RpcResult<never> => ({
+const rpcErr = (error: { message?: string; name?: string }): RpcResult<never> => ({
   ok: false,
   error: {
     message: error.message ?? "Unknown error",
@@ -33,9 +28,8 @@ const rpcErr = (
   },
 });
 
-const toRpcResult = <T>(
-  result: Result<T, { message?: string; name?: string }>,
-): RpcResult<T> => result.isOk() ? rpcOk(result.value) : rpcErr(result.error);
+const toRpcResult = <T>(result: Result<T, { message?: string; name?: string }>): RpcResult<T> =>
+  result.isOk() ? rpcOk(result.value) : rpcErr(result.error);
 
 export class LoomServerImpl extends RpcTarget implements LoomServerApi {
   #client: RpcStub<LoomClientApi> | null = null;
@@ -65,14 +59,12 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
     if (!nodes.isOk()) return rpcErr(nodes.error);
     if (!edges.isOk()) return rpcErr(edges.error);
 
-    return rpcOk(
-      {
-        problemStatement: problemStatement.value,
-        layout: layout.value,
-        nodes: nodes.value,
-        edges: edges.value,
-      } satisfies WorkspaceSnapshot,
-    );
+    return rpcOk({
+      problemStatement: problemStatement.value,
+      layout: layout.value,
+      nodes: nodes.value,
+      edges: edges.value,
+    } satisfies WorkspaceSnapshot);
   }
 
   async listSnapshots() {
@@ -129,9 +121,7 @@ export class LoomServerImpl extends RpcTarget implements LoomServerApi {
   }
 
   async setProblemStatement(problemStatement: string) {
-    return toRpcResult(
-      await this.deps.workspace.setProblemStatement(problemStatement),
-    );
+    return toRpcResult(await this.deps.workspace.setProblemStatement(problemStatement));
   }
 
   async getProblemStatement() {

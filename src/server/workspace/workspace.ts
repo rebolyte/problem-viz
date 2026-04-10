@@ -28,7 +28,11 @@ const getMeta =
   async (key: string): Promise<Result<WorkspaceMetaValue | null, AppError>> =>
     Result.tryPromise({
       try: async () => {
-        const row = await db.selectFrom("workspace_meta").selectAll().where("key", "=", key).executeTakeFirst();
+        const row = await db
+          .selectFrom("workspace_meta")
+          .selectAll()
+          .where("key", "=", key)
+          .executeTakeFirst();
         return row ? JSON.parse(row.value) : null;
       },
       catch: dbError(`Failed to read workspace meta for ${key}`),
@@ -106,7 +110,8 @@ export const makeWorkspace = (deps: WorkspaceDeps) => {
     return Result.ok(result.value);
   };
 
-  const setLayout = (layout: WorkspaceMetaValue) => applyChange(WORKSPACE_KEYS.layout, layout, true);
+  const setLayout = (layout: WorkspaceMetaValue) =>
+    applyChange(WORKSPACE_KEYS.layout, layout, true);
 
   const undo = async () => {
     const entry = undoStack.pop();

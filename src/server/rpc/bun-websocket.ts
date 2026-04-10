@@ -21,7 +21,9 @@ export class BunWebSocketAdapter extends EventTarget {
     const data =
       typeof message === "string"
         ? message
-        : new TextDecoder().decode(message instanceof ArrayBuffer ? new Uint8Array(message) : message);
+        : new TextDecoder().decode(
+            message instanceof ArrayBuffer ? new Uint8Array(message) : message,
+          );
 
     this.dispatchEvent(new MessageEvent("message", { data }));
   }

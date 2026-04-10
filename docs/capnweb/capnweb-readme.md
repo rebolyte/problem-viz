@@ -157,10 +157,7 @@ let friendProfilesPromise = friendsPromise.map((id: RpcPromise<number>) => {
 // result. If you don't actually await a promise before the batch is sent,
 // the system detects this and doesn't actually ask the server to send the
 // return value back!
-let [profile, friendProfiles] = await Promise.all([
-  profilePromise,
-  friendProfilesPromise,
-]);
+let [profile, friendProfiles] = await Promise.all([profilePromise, friendProfilesPromise]);
 
 console.log(`Hello, ${profile.name}!`);
 

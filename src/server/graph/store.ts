@@ -63,7 +63,9 @@ export type CreateEdgeInput = {
   meta: JsonValue;
 };
 
-export type UpdateEdgeInput = Partial<Omit<CreateEdgeInput, "id" | "sourceNode" | "targetNode" | "kind">> & {
+export type UpdateEdgeInput = Partial<
+  Omit<CreateEdgeInput, "id" | "sourceNode" | "targetNode" | "kind">
+> & {
   sourceNode?: string;
   targetNode?: string;
   kind?: EdgeKind;
@@ -134,7 +136,10 @@ export const makeGraphStore = (db: Kysely<DatabaseSchema>) => {
       catch: dbError("Failed to add node"),
     });
 
-  const updateNode = (id: string, input: UpdateNodeInput): Promise<Result<GraphNode | null, AppError>> =>
+  const updateNode = (
+    id: string,
+    input: UpdateNodeInput,
+  ): Promise<Result<GraphNode | null, AppError>> =>
     Result.tryPromise({
       try: async () => {
         const row = await db
@@ -166,7 +171,11 @@ export const makeGraphStore = (db: Kysely<DatabaseSchema>) => {
   const getNode = (id: string): Promise<Result<GraphNode | null, AppError>> =>
     Result.tryPromise({
       try: async () => {
-        const row = await db.selectFrom("nodes").selectAll().where("id", "=", id).executeTakeFirst();
+        const row = await db
+          .selectFrom("nodes")
+          .selectAll()
+          .where("id", "=", id)
+          .executeTakeFirst();
         return row ? toNode(row) : null;
       },
       catch: dbError("Failed to get node"),
@@ -205,7 +214,10 @@ export const makeGraphStore = (db: Kysely<DatabaseSchema>) => {
       catch: dbError("Failed to add edge"),
     });
 
-  const updateEdge = (id: string, input: UpdateEdgeInput): Promise<Result<GraphEdge | null, AppError>> =>
+  const updateEdge = (
+    id: string,
+    input: UpdateEdgeInput,
+  ): Promise<Result<GraphEdge | null, AppError>> =>
     Result.tryPromise({
       try: async () => {
         const row = await db
@@ -240,7 +252,11 @@ export const makeGraphStore = (db: Kysely<DatabaseSchema>) => {
   const getEdge = (id: string): Promise<Result<GraphEdge | null, AppError>> =>
     Result.tryPromise({
       try: async () => {
-        const row = await db.selectFrom("edges").selectAll().where("id", "=", id).executeTakeFirst();
+        const row = await db
+          .selectFrom("edges")
+          .selectAll()
+          .where("id", "=", id)
+          .executeTakeFirst();
         return row ? toEdge(row) : null;
       },
       catch: dbError("Failed to get edge"),

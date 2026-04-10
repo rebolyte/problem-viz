@@ -30,7 +30,9 @@ export function ControlPanel(_props: IDockviewPanelProps) {
         </button>
       </div>
       <div className="text-xs text-neutral-400">
-        {verifyProgress ? `${verifyProgress.phase} ${verifyProgress.completed}/${verifyProgress.total}` : "Verify idle"}
+        {verifyProgress
+          ? `${verifyProgress.phase} ${verifyProgress.completed}/${verifyProgress.total}`
+          : "Verify idle"}
       </div>
       <div className="min-h-0 flex-1">
         <CodeEditor onChange={setSource} value={source} />

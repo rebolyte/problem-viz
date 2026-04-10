@@ -1,5 +1,10 @@
 import { RpcTarget } from "capnweb";
-import type { AgentMessage, AgentMutation, LoomClientApi, VerifyProgress } from "../../rpc/loom-client.ts";
+import type {
+  AgentMessage,
+  AgentMutation,
+  LoomClientApi,
+  VerifyProgress,
+} from "../../rpc/loom-client.ts";
 
 type LoomClientEvent =
   | { type: "verify-progress"; payload: VerifyProgress }

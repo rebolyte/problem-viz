@@ -4,7 +4,10 @@ import type { LoomClientApi } from "./src/rpc/loom-client.ts";
 import { start } from "./src/server/main.ts";
 import { BunWebSocketAdapter } from "./src/server/rpc/bun-websocket.ts";
 import { LoomServerImpl } from "./src/server/rpc/loom-server-impl.ts";
-import { createSimWorkerResponse, SIM_WORKER_PATH } from "./src/server/services/sim-worker-bundle.ts";
+import {
+  createSimWorkerResponse,
+  SIM_WORKER_PATH,
+} from "./src/server/services/sim-worker-bundle.ts";
 
 const { container, api } = await start();
 const sessions = new Map<string, { adapter?: BunWebSocketAdapter; server: LoomServerImpl }>();
@@ -57,7 +60,10 @@ const server = Bun.serve<{ sessionId: string }>({
 
       const adapter = new BunWebSocketAdapter(ws);
       session.adapter = adapter;
-      const client = newWebSocketRpcSession<LoomClientApi>(adapter as unknown as WebSocket, session.server);
+      const client = newWebSocketRpcSession<LoomClientApi>(
+        adapter as unknown as WebSocket,
+        session.server,
+      );
       session.server.setClient(client);
     },
     message(ws, message) {

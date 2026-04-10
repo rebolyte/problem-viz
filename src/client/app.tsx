@@ -10,8 +10,10 @@ import { DockviewLayout } from "./shell/dockview-layout.tsx";
 
 const createDevtoolsServer = (server: LoomServerApi) => ({
   listNodes: (...args: Parameters<LoomServerApi["listNodes"]>) => server.listNodes(...args),
-  queryDownstream: (...args: Parameters<LoomServerApi["queryDownstream"]>) => server.queryDownstream(...args),
-  queryUpstream: (...args: Parameters<LoomServerApi["queryUpstream"]>) => server.queryUpstream(...args),
+  queryDownstream: (...args: Parameters<LoomServerApi["queryDownstream"]>) =>
+    server.queryDownstream(...args),
+  queryUpstream: (...args: Parameters<LoomServerApi["queryUpstream"]>) =>
+    server.queryUpstream(...args),
   addNode: async (...args: Parameters<LoomServerApi["addNode"]>) => {
     const result = await server.addNode(...args);
     if (result.ok) {
@@ -96,7 +98,11 @@ export function App() {
   }, []);
 
   if (!bootstrapped) {
-    return <div className="flex h-full items-center justify-center bg-neutral-950 text-neutral-200">Loom bootstrapping...</div>;
+    return (
+      <div className="flex h-full items-center justify-center bg-neutral-950 text-neutral-200">
+        Loom bootstrapping...
+      </div>
+    );
   }
 
   return <DockviewLayout />;

@@ -12,7 +12,15 @@ export function LensTabsPanel(_props: IDockviewPanelProps) {
       <div className="min-h-0 flex-1 overflow-auto rounded border border-neutral-800 bg-neutral-900 p-2">
         <div className="flex min-h-full items-center justify-center">
           <LineChart
-            data={data.length > 0 ? data : [{ tick: 0, v: 0 }, { tick: 1, v: 3 }, { tick: 2, v: 1 }]}
+            data={
+              data.length > 0
+                ? data
+                : [
+                    { tick: 0, v: 0 },
+                    { tick: 1, v: 3 },
+                    { tick: 2, v: 1 },
+                  ]
+            }
             height={220}
             width={420}
           >

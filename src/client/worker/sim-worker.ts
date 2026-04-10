@@ -52,15 +52,18 @@ class SimEngineImpl extends RpcTarget implements SimEngineApi {
   }
 }
 
-globalThis.addEventListener("message", (event: MessageEvent<{ type: string; port?: MessagePort }>) => {
-  if (event.data.type !== "connect" || !event.data.port) {
-    return;
-  }
+globalThis.addEventListener(
+  "message",
+  (event: MessageEvent<{ type: string; port?: MessagePort }>) => {
+    if (event.data.type !== "connect" || !event.data.port) {
+      return;
+    }
 
-  const engine = new SimEngineImpl();
-  event.data.port.start();
-  const client = newMessagePortRpcSession<SimClientApi>(event.data.port, engine);
-  engine.attachClient(client);
-});
+    const engine = new SimEngineImpl();
+    event.data.port.start();
+    const client = newMessagePortRpcSession<SimClientApi>(event.data.port, engine);
+    engine.attachClient(client);
+  },
+);
 
 export {};
