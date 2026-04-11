@@ -40,11 +40,9 @@ export function GraphCanvas() {
 
   const onNodeDragStop = async (_event: unknown, node: Node) => {
     workspaceStore.actions.updateNodePosition(node.id, node.position);
-    await server?.updateNode(node.id, {
-      meta: {
-        position: node.position,
-      },
-    });
+    const graphNode = workspaceStore.getSnapshot().nodes.find((n) => n.id === node.id);
+    const meta = graphNode?.meta ?? { position: node.position };
+    await server?.updateNode(node.id, { meta });
   };
 
   const onNodeClick = (_event: unknown, node: Node) => {

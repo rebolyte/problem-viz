@@ -1,6 +1,17 @@
 import { nanoid } from "nanoid";
 import type { CreateEdgeInput, CreateNodeInput } from "../../server/graph/store.ts";
 
+const positionFromSeedId = (seedId: string): { x: number; y: number } => {
+  let h = 0;
+  for (let i = 0; i < seedId.length; i++) {
+    h = Math.imul(31, h) + seedId.charCodeAt(i);
+  }
+  const u = h >>> 0;
+  const col = u % 4;
+  const row = (u >>> 8) % 4;
+  return { x: 80 + col * 200, y: 80 + row * 140 };
+};
+
 export const buildCompoundInterestGraph = (): {
   nodes: CreateNodeInput[];
   edges: CreateEdgeInput[];
@@ -8,6 +19,7 @@ export const buildCompoundInterestGraph = (): {
   const seedId = nanoid();
   const balanceId = `balance-${seedId}`;
   const interestId = `interest-${seedId}`;
+  const position = positionFromSeedId(seedId);
   const nodes: CreateNodeInput[] = [
     {
       id: balanceId,
@@ -18,7 +30,7 @@ export const buildCompoundInterestGraph = (): {
         },
       },
       config: { initialBalance: 100 },
-      meta: { label: "Balance", position: { x: 240, y: 160 } },
+      meta: { label: "Balance", position },
     },
   ];
   const edges: CreateEdgeInput[] = [

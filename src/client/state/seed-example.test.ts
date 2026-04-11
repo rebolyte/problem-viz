@@ -31,4 +31,18 @@ describe("buildCompoundInterestGraph", () => {
     expect(secondEdge.sourceNode).toBe(secondNodeId);
     expect(secondEdge.targetNode).toBe(secondNodeId);
   });
+
+  it("gives distinct stock positions per seed so nodes do not stack", () => {
+    const positions = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      const { nodes } = buildCompoundInterestGraph();
+      const stock = nodes[0]!;
+      const pos = stock.meta.position;
+      expect(pos !== null && typeof pos === "object").toBe(true);
+      const px = pos as { x?: unknown; y?: unknown };
+      const key = `${Number(px.x)},${Number(px.y)}`;
+      positions.add(key);
+    }
+    expect(positions.size).toBeGreaterThan(1);
+  });
 });

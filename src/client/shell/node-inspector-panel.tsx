@@ -24,11 +24,50 @@ export function NodeInspectorPanel(_props: IDockviewPanelProps) {
     await workspaceStore.actions.refreshNodes(server);
   };
 
+  const commitLabel = async (label: string) => {
+    if (!server) return;
+    const meta = node.meta;
+    const next =
+      meta && typeof meta === "object" && meta !== null && !Array.isArray(meta)
+        ? { ...(meta as Record<string, unknown>), label }
+        : { label };
+    const result = await server.updateNode(node.id, { meta: next });
+    if (result.ok) await workspaceStore.actions.refreshNodes(server);
+  };
+
+  const deleteNode = async () => {
+    if (!server) return;
+    const result = await server.deleteNode(node.id);
+    if (!result.ok) return;
+    workspaceStore.actions.setSelectedNodeId(null);
+    await workspaceStore.actions.refreshNodes(server);
+    await workspaceStore.actions.refreshEdges(server);
+  };
+
+  const labelValue = typeof node.meta.label === "string" ? node.meta.label : "";
+
   return (
     <div className="flex h-full flex-col gap-2 bg-neutral-950 p-3 text-sm text-neutral-100">
       <div className="text-xs uppercase tracking-wide text-neutral-400">
         {node.kind} · {node.id}
       </div>
+      <label className="flex flex-col gap-1 text-xs">
+        Label
+        <input
+          key={node.id}
+          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-neutral-100"
+          defaultValue={labelValue}
+          type="text"
+          onBlur={(e) => void commitLabel(e.target.value)}
+        />
+      </label>
+      <button
+        className="rounded border border-red-800 bg-red-950/40 px-2 py-1 text-xs text-red-200 hover:bg-red-950/60"
+        type="button"
+        onClick={() => void deleteNode()}
+      >
+        Delete node
+      </button>
       {Object.entries(schema.config ?? {}).map(([fieldName, field]) => (
         <ConfigFieldInput
           key={fieldName}
