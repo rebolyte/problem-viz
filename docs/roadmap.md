@@ -82,7 +82,7 @@ Phase 3 task 0 copies these rules into `docs/semantics.md` as the living spec. E
 - **D2** Property checks are TypeScript compiled like behaviors, with context `({ nodes, edges, tick })` where `nodes` is keyed by a new unique human `name` field on nodes (one migration; nanoid ids stay as the machine key).
 - **D3** Verify stores per-seed verdicts only (pass/fail + first violation tick + property id). Failing traces are regenerated on demand by deterministic re-run. Determinism *is* the storage format.
 - **D4** The agent gets `run_simulation`, `read_trace`, `run_verify`, `add_property` tools backed by server-side headless runs persisted to the existing `trace` table. This closes the build-but-can't-observe gap.
-- **D5** Undo/redo is a server-side command log: every store mutation records `{ op, inverse, batchId }`; one agent conversation turn = one batch; undo applies inverses and broadcasts. **Moved earlier in the plan (phase 4)** — trust must arrive before we hand more power to the agent and before humans build models worth protecting.
+- **D5** Undo/redo is a server-side command log: every store mutation records `{ op, inverse, batchId }`; one agent conversation turn = one batch; undo applies inverses and broadcasts. **Ships with the authoring UI (phase 5), not after** — trust must arrive before we hand more power to the agent and before humans build models worth protecting.
 - **D6** Named snapshots = SQLite file copy under `data/snapshots/<name>.sqlite` + RPC to save/list/load. Atomic, includes everything.
 - **D7** Slider drag re-simulates via `configOverrides` in the worker (no SQLite writes per pixel); persistence happens on release/blur.
 - **D8** `new Function` stays for V1 (single-tenant localhost, accepted per design doc), hardened by S5 capability injection. smolVM/Firecracker remains post-V1.
@@ -101,7 +101,7 @@ This is how we and the agents *know* the thing works. Built in phase 3 task 0, b
 | L0 unit | Pure function tests (existing 87) | colocated `*.test.ts` | every commit |
 | L1 property | fast-check over generated graphs/configs attacking S-rules | `src/engine/semantics/*.test.ts` | every commit (fixed FC seed in CI, random locally) |
 | L2 oracle | Domain fixtures with closed-form/reference expectations | `src/fixtures/*.ts` + `*.test.ts` | every commit |
-| L3 differential | Client `run()` vs server headless runner: identical trace JSON per fixture | `src/server/verify/differential.test.ts` (from phase 5) | every commit |
+| L3 differential | Client `run()` vs server headless runner: identical trace JSON per fixture | `src/server/verify/differential.test.ts` (from phase 4) | every commit |
 | L4 RPC e2e | Server on ephemeral port + capnweb client, full loops (agent tool → mutation → sim → trace) | `src/e2e/*.test.ts` (harness pattern exists in `src/server/utils/harness.ts`) | every commit |
 | L5 journeys | Scripted browser flows against `bun server.ts` | `e2e/journeys/*.spec.ts` (Playwright) | pre-merge / on demand |
 | L6 bench | Perf budgets as regression gates | `src/engine/bench.test.ts` | pre-merge |
@@ -149,7 +149,7 @@ Playwright specs so agents can verify UI work without a human watching. Server b
 - **J4 trust**: agent chat adds nodes (LLM stubbed via a fake `LLMService` — the harness already fakes it in tests) → undo reverts the whole turn → redo restores.
 - **J5 verify/investigate**: declare property on ws-protocol fixture → verify 500 seeds → open a failure → scrubber parked at violation tick, property highlighted.
 
-J1–J2 land with phase 4; J3–J4 with their features; J5 with phase 5. Keep the total under ~2 minutes runtime.
+J1–J4 land with phase 5; J5 with phase 6. Keep the total under ~2 minutes runtime.
 
 ### 3.5 Perf budgets (`src/engine/bench.test.ts`)
 
@@ -181,7 +181,7 @@ Agent prompt preamble (paste verbatim when delegating):
 
 ## Part 4 — Build plan
 
-Ordering: harness + semantics first (everything else renders or verifies what the engine means), then interop, then the explore loop with trust, then verify/investigate (the differentiator), then lenses, snapshots, external agent surface. Each phase is one agent-session-sized unit with fixture-level acceptance.
+Ordering principle: after the engine (a prerequisite for everything), phases follow **value density, not architectural convenience**. The value ranking: (1) the agent-grounding loop — agent builds *and observes* models; (2) the Investigate bridge — from failure to scrubber-parked understanding; (3) explore/scrub UX; (4) verify-at-scale; (5) lens variety. The cycle is the product: a thin closed loop beats any single polished layer, so ship the loop thin and deepen later. Each phase is one agent-session-sized unit with fixture-level acceptance. A cut line at the end of this part lists what can slip without harming the value proposition.
 
 ### Phase 3 — Semantics, harness, engine interop
 
@@ -190,57 +190,82 @@ Read first: `src/engine/tick-loop.ts`, `src/engine/types.ts`, `src/engine/archet
 - **3.0 Spec + harness scaffolding.** Write `docs/semantics.md` from Part 2 (S1–S12). Add `fast-check`. Create `src/engine/testing/arbitraries.ts`, `src/fixtures/` (move the compound-interest seed builder here; add oracle test `P(1+r)^t`). Add CI workflow + mise tasks (3.6). Write properties 1 and 7 from 3.2 against the *current* engine — they should pass and become the ratchet.
 - **3.1 Canonical ordering + capability injection.** Topo order with id tie-break (S4); shadow `Math`/`Date`/`performance`/`crypto` in compiled behaviors (S5); error-state variant in `EntityState` with correct archetype identity (S8) and NaN policy (S9). Properties 2 and 6 written first, failing, then green.
 - **3.2 Routing + derived variables.** Route tick/process outputs through passthrough edges into downstream inputs same-tick per S2/S3; back-edge delay for cycles. Variables compile a `value({ inputs, config, tick, rand })` behavior, evaluated topo-first; flow rates accept stock *and* variable sources (fixes the FIRE-breaking bug at `tick-loop.ts:86`); stock init per D9; passthrough snapshot state `{ kind: "passthrough", lastValue }`. Fixtures first: `fire` and `dcf` written failing, then green. Two-tick-node same-tick delivery test; cycle 1-tick-delay test.
-- **3.3 Process nodes + channel edges.** Generator scheduler: compile `run`, drive per-node iterator, `emit` buffers into routing, `yield wait.for(port, timeout)` / `wait.ticks(n)` suspend/resume at tick boundaries (S2 step 5, S3 register rule). Channel edges compile `tick({ state, pending, config, tick, rand })` returning `{ state, deliver }`; snapshot real pending counts. Fixture first: `ws-protocol` — the north star — written failing with its invariants, then green. Loss/latency reproducible per seed.
+- **3.3 Process nodes + channel edges.** Generator scheduler: compile `run`, drive per-node iterator, `emit` buffers into routing, `yield wait.for(port, timeout)` / `wait.ticks(n)` suspend/resume at tick boundaries (S2 step 5, S3 register rule). Channel edges compile `tick({ state, pending, config, tick, rand })` returning `{ state, deliver }`; snapshot real pending counts. While building routing, snapshots also gain routed-message records `{ edgeId, from, to, payload }` (shallow payloads) — the sequence lens needs them and retrofitting message capture later is costlier; extend S12 in the same commit. Fixture first: `ws-protocol` — the north star — written failing with its invariants, then green. Loss/latency reproducible per seed.
 - **3.4 PRNG streams + overrides + replay.** Per-entity streams `hash(seed, entityId)` (S7); apply `configOverrides` and `changesAtTick` (S6). Properties 3 and 4 first, then green. Conservation property 5 (S10).
 
 Acceptance: fixtures `compound-interest`, `fire`, `dcf`, `ws-protocol` all green; all seven core properties green; bench green.
 
-### Phase 4 — Explore loop + trust
+### Phase 4 — Agent observability: close the grounding loop
+
+The highest-value capability in the tool, and it needs almost no UI. The agent can already build; after this phase it can run and observe — the model becomes something the agent is accountable to, not just prose with extra steps.
+
+Read first: `src/server/services/sim-worker-bundle.ts`, `src/server/rpc/loom-server-impl.ts`, `src/server/domains/assistant/tool-handlers.ts`.
+
+- **4.1 Headless server run (D1, minimal).** Single `worker_threads` runner over the engine bundle (the pool waits for batch verify); persist runs to the existing `trace` table stamped with seed + `graphVersion`. **Differential test lands here**: server runner vs client `run()` on every fixture → identical trace JSON (L3).
+- **4.2 Agent tools (D4).** `run_simulation`, `read_trace` (windowed: entity + tick-range filters — never dump 1,000 snapshots into model context), plus the missing CRUD (`delete_node`, `delete_edge`, `update_edge`, `query_upstream`). Raise `MAX_ROUNDS` to ~12.
+- **4.3 Loop e2e.** Scripted fake-LLM conversation (harness pattern exists) builds the FIRE fixture via tools, runs it, reads the trace, reports the final balance — proving the build→run→observe→describe loop closes with no browser involved.
+
+Acceptance: in chat, "model compound interest at 8% and tell me the balance at tick 30" produces a built graph, a real run, and a correct number.
+
+### Phase 5 — Explore + trust
+
+Slimmed from the original plan: the agent is the primary authoring path (it's what collapses the modeling tax), so human authoring UI gets the minimal viable version and polish sits below the cut line.
 
 Read first: `src/client/shell/*`, `src/client/canvas/graph-canvas.tsx`, `src/client/state/workspace-store.ts`, `src/client/editor/code-editor.tsx`, `src/server/graph/store.ts`.
 
-- **4.1 Behavior editing.** Inspector gains CodeMirror for selected node/edge behavior; save → update → auto re-run; compile errors inline (implement the currently no-op worker `compile` RPC). Edge selection (`onEdgeClick` → `selectedEdgeId`).
-- **4.2 Canvas authoring.** `onConnect` → addEdge with kind picker; node palette per archetype with default schema/behavior templates (reuse fixture templates); edge delete. Control panel drops its smoke-test editor/JSON dump; gains fixture seed buttons.
-- **4.3 Transport.** Seed + tick-count inputs, play/pause (rAF over `currentTick`), run status; kill the hardcoded `{ seed: 42, toTick: 50 }`.
-- **4.4 Undo/redo (D5, moved up).** Command log with inverses and batch ids in the graph store; agent turn = one batch; `undo`/`redo` RPC + buttons + shortcuts; mutation broadcasts refresh clients. Tests: inverse round-trip per op type; batch undo restores exact pre-turn state (in-memory SQLite harness exists).
-- **4.5 Control panel proper (D7).** Auto-discover config fields from schemas; pin/unpin persisted in `workspace_meta`; slider drag → debounced worker re-sim via overrides; release → persist.
-- **4.6 State-on-canvas + provenance.** Custom React Flow renderers (`node-types.tsx` finally used): label, kind badge, current-tick state summary, error styling. `graphVersion` stamping + stale-trace banner (S11).
+- **5.1 Behavior editing.** Inspector gains CodeMirror for selected node/edge behavior; save → update → auto re-run; compile errors inline (implement the currently no-op worker `compile` RPC). Edge selection (`onEdgeClick` → `selectedEdgeId`).
+- **5.2 Transport.** Seed + tick-count inputs, play/pause (rAF over `currentTick`), run status; kill the hardcoded `{ seed: 42, toTick: 50 }`.
+- **5.3 Undo/redo (D5).** Command log with inverses and batch ids in the graph store; agent turn = one batch; `undo`/`redo` RPC + buttons + shortcuts; mutation broadcasts refresh clients. Tests: inverse round-trip per op type; batch undo restores exact pre-turn state (in-memory SQLite harness exists). Trust ships in the same phase as the authoring UI, not after.
+- **5.4 State-on-canvas + provenance.** Custom React Flow renderers (`node-types.tsx` finally used): label, kind badge, current-tick state summary, error styling. `graphVersion` stamping + stale-trace banner (S11).
+- **5.5 Sequence lens (moved up).** Swimlanes per node, message arrows from the phase-3.3 message records, cursor synced to scrubber. Plain SVG. Moved ahead of other lenses because the north-star demo is *watching the protocol run* — without it the flagship domain renders as a JSON dump.
+- **5.6 Canvas authoring, minimal.** `onConnect` → addEdge with kind picker; simple add-node menu per archetype seeded with fixture behavior templates; edge delete. Control panel drops its smoke-test editor/JSON dump; gains fixture seed buttons. Palette polish deferred.
+- **5.7 Slider re-sim, scoped (D7).** Numeric config fields of the *selected* node render as sliders in the inspector; drag → debounced worker re-sim via overrides; release → persist. The pin/unpin control-panel infrastructure is below the cut line — one node's sliders deliver the scrub-and-see experience.
 
-Acceptance: journeys J1–J4 green. Manual north-star check: build the FIRE model from scratch in the UI, pin savings-rate, drag it, watch the FIRE date move.
+Acceptance: journeys J1–J4 green (J3 scoped to inspector sliders). Manual north-star check: build the FIRE model in the UI, drag savings-rate, watch the FIRE date move; run ws-protocol and watch messages flow in the sequence lens.
 
-### Phase 5 — Verify, shrink, investigate + agent parity
+### Phase 6 — Properties, verify, investigate
 
-Read first: `src/server/graph/store.ts` (properties/trace tables), `src/server/services/sim-worker-bundle.ts`, `src/server/rpc/loom-server-impl.ts`, design doc §Property & Verification.
+Read first: `src/server/graph/store.ts` (properties/trace tables), `src/server/rpc/loom-server-impl.ts`, design doc §Property & Verification.
 
-- **5.1 Node names + property CRUD (D2).** Migration: unique `name` on nodes; store + RPC + panel (list, enable/disable, CodeMirror check source, compile-on-save). Invariant + liveness kinds; statistical stays V2.
-- **5.2 Headless server runner (D1).** `worker_threads` pool over the engine bundle; `runSeed(graph, seed, properties)` evaluates checks per tick in-worker, fail-fast, returns verdicts only (D3). **Differential test lands here**: server runner vs client `run()` on every fixture → identical traces (L3).
-- **5.3 Batch runner + report.** `verify({ seeds, workers, properties })` streaming `onVerifyProgress`; verify panel: per-property pass counts, failing seeds, first violations.
-- **5.4 Shrinker.** Dimensions per design doc: tick count (binary search), config values (halve toward defaults), seed neighborhood (±k). Tests: monotonicity (each accepted shrink step still fails the property) and idempotence on a constructed failure.
-- **5.5 Investigate.** `loadFailure` → client re-runs that seed/config (D3), scrubber parked at violation tick, property + failing predicate shown, offending entities highlighted.
-- **5.6 Agent parity (D4).** Tools: `run_simulation`, `read_trace`, `run_verify`, `add_property`, plus missing CRUD (`delete_node`, `delete_edge`, `update_edge`, `query_upstream`). Raise `MAX_ROUNDS` to ~12. E2e: agent builds ws-protocol from a prompt (fake LLM script), runs verify, reads the report.
+- **6.1 Node names + property CRUD (D2).** Migration: unique `name` on nodes; store + RPC + panel (list, enable/disable, CodeMirror check source, compile-on-save). Invariant + liveness kinds; statistical stays V2.
+- **6.2 Explore-mode property checking first.** Every *interactive* run evaluates enabled properties in the worker; a violation parks the scrubber at the violating tick and highlights the property + entities. This delivers the Investigate experience — the #2 value — before any batch infrastructure exists, and makes properties part of the daily explore loop rather than a separate mode you have to visit.
+- **6.3 Batch runner + report.** Grow the phase-4.1 runner into a pool; `verify({ seeds, workers, properties })` evaluates checks per tick in-worker, fail-fast, verdicts only (D3), streaming `onVerifyProgress`; verify panel: per-property pass counts, failing seeds, first violations.
+- **6.4 Shrinker.** Dimensions per design doc: tick count (binary search), config values (halve toward defaults), seed neighborhood (±k). Tests: monotonicity (each accepted shrink step still fails the property) and idempotence on a constructed failure.
+- **6.5 Investigate loading.** `loadFailure` → client re-runs that seed/config (D3), scrubber parked at violation tick, property + failing predicate shown, offending entities highlighted — same surface as 6.2, fed by batch results.
+- **6.6 Agent verify tools.** `add_property`, `run_verify` complete the D4 surface. E2e: agent builds ws-protocol from a prompt (fake LLM script), declares a property, runs verify, reads the report.
+
+Honesty rule for all verify UI and agent-facing copy: a green result means *the model* satisfies the property across N seeds — never imply the modeled system is verified. Loom builds correct understanding; it does not certify implementations.
 
 Acceptance: the design doc's verify narrative runs end to end on the ws-protocol fixture: declare "no message loss" → 1,000 seeds → failures found → shrunk → explorer parked at the failing tick. Journey J5 green.
 
-### Phase 6 — Lenses
-
-- **6.1 Message capture.** Snapshots gain routed-message records `{ edgeId, from, to, payload }` (shallow payloads) — S12 extension, spec + tests updated.
-- **6.2 Sequence lens.** Swimlanes per node, message arrows, cursor synced to scrubber. Plain SVG.
-- **6.3 DAG lens.** Layered layout + critical path over `dependency` edges (pure function, oracle-tested via `pert` fixture).
-- **6.4 Suggestion.** `suggest_lens` tool: structural heuristics (process+channel → sequence; dependency edges → DAG; stocks → timeline) + problem-statement keywords; `onLensSuggestion` client callback (C10).
-
-Acceptance: ws-protocol renders a legible message sequence; `pert` fixture shows its critical path; agent suggests sensibly on all fixtures.
-
-### Phase 7 — Snapshots + workspace polish
+### Phase 7 — Completion tier
 
 - **7.1 Named snapshots (D6).** Save = checkpoint + file copy; list/load RPC; load = reopen DB + full client reload. Fix the `saveWorkspace`-aliases-`loadWorkspace` stub. Round-trip test.
-- **7.2 Chat-turn revert affordance** in the chat panel (batch undo from 4.4, surfaced per-turn).
-- **7.3 Cleanups.** Prune teddygram vars from `.env.example`; dead code sweep.
+- **7.2 Chat-turn revert affordance** in the chat panel (batch undo from 5.3, surfaced per-turn).
+- **7.3 DAG lens.** Layered layout + critical path over `dependency` edges (pure function, oracle-tested via `pert` fixture).
+- **7.4 Lens suggestion (C10).** `suggest_lens` tool: structural heuristics (process+channel → sequence; dependency edges → DAG; stocks → timeline) + problem-statement keywords; `onLensSuggestion` client callback.
+- **7.5 Cleanups.** Prune teddygram vars from `.env.example`; dead code sweep.
 
 ### Phase 8 — External agent surface
 
-- **8.1 CLI.** `bin/loom.ts` over the capnweb WS API, subcommands mirroring the design doc's Agent Interface section; JSON in/out; exit codes from RpcResult. E2e-tested against an ephemeral server.
-- **8.2 MCP server.** Stdio wrapper exposing the phase-5 tool surface for Claude Code.
+MCP before CLI: Claude Code speaks MCP natively and the in-browser agent already covers conversational use — the CLI is a convenience wrapper, not a capability.
+
+- **8.1 MCP server.** Stdio wrapper over the capnweb WS API exposing the phase 4/6 tool surface for Claude Code.
+- **8.2 CLI.** `bin/loom.ts`, subcommands mirroring the design doc's Agent Interface section; JSON in/out; exit codes from RpcResult. E2e-tested against an ephemeral server.
 - **8.3 Docs.** README agent-usage section; system prompt regenerated for the full tool surface.
+
+### The cut line
+
+If time pressure hits, cut from the bottom up — everything below preserves the demo script and the top two value tiers (agent-grounding loop, Investigate bridge):
+
+1. `traffic` fixture (stretch already)
+2. State-matrix lens (effectively V2 already), DAG lens + `pert` fixture UI (keep the fixture's oracle test — it's cheap)
+3. Control-panel pin/unpin + derived controls (inspector sliders cover the experience)
+4. CLI (MCP covers agents; you have the browser)
+5. Named snapshots (copy the SQLite file by hand)
+6. Canvas palette polish (agent authors; `onConnect` + minimal menu suffice)
+
+Not cuttable, ever: the semantics spec and its tests, determinism properties, the fixtures, undo, and any phase-4/6 item — those *are* the product.
 
 ### V1 exit criterion — the demo script
 
