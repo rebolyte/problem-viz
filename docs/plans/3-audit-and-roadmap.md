@@ -1,5 +1,7 @@
 # Loom Audit + Roadmap to V1 (Phase 3+)
 
+> Superseded by [docs/roadmap.md](../roadmap.md) — the canonical build plan with semantics spec and testing harness. Audit findings below (Parts 1–2) remain valid as the historical record.
+
 Audit date: 2026-07-01, `main` @ `cefa9aa`. Baseline health: `tsc --noEmit` clean, `oxlint` clean, 87/87 tests pass.
 
 ## Part 1 — Audit
