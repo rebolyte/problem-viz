@@ -24,17 +24,17 @@ The executable spec for the engine. Every rule has at least one test whose name 
 
 ## Status
 
-| Rule | Status | Test |
-| --- | --- | --- |
-| S1 | implemented | `src/engine/tick-loop.test.ts`, `src/engine/semantics/determinism.test.ts` |
-| S2 | partial (stocks/variables/flows; no routing) | pending task 3.2 |
-| S3 | pending | task 3.2 (wire), 3.3 (register) |
-| S4 | pending | task 3.1 |
-| S5 | pending | task 3.1 |
-| S6 | pending | task 3.4 |
-| S7 | pending (single shared PRNG today) | task 3.4 |
-| S8 | pending (error states mislabeled as tick) | task 3.1 |
-| S9 | pending (silent 0 paths exist) | task 3.1 |
-| S10 | partial (self-loop inflow idiom works; conservation untested) | task 3.2 |
-| S11 | pending | phase 5 |
-| S12 | implemented (current entity kinds) | `src/engine/semantics/serialization.test.ts` |
+| Rule | Status                                                        | Test                                                                       |
+| ---- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| S1   | implemented                                                   | `src/engine/tick-loop.test.ts`, `src/engine/semantics/determinism.test.ts` |
+| S2   | partial (stocks/variables/flows; no routing)                  | pending task 3.2                                                           |
+| S3   | pending                                                       | task 3.2 (wire), 3.3 (register)                                            |
+| S4   | pending                                                       | task 3.1                                                                   |
+| S5   | pending                                                       | task 3.1                                                                   |
+| S6   | pending                                                       | task 3.4                                                                   |
+| S7   | pending (single shared PRNG today)                            | task 3.4                                                                   |
+| S8   | pending (error states mislabeled as tick)                     | task 3.1                                                                   |
+| S9   | pending (silent 0 paths exist)                                | task 3.1                                                                   |
+| S10  | partial (self-loop inflow idiom works; conservation untested) | task 3.2                                                                   |
+| S11  | pending                                                       | phase 5                                                                    |
+| S12  | implemented (current entity kinds)                            | `src/engine/semantics/serialization.test.ts`                               |

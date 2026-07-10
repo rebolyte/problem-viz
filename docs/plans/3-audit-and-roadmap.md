@@ -8,36 +8,36 @@ Audit date: 2026-07-01, `main` @ `cefa9aa`. Baseline health: `tsc --noEmit` clea
 
 ### What exists and works (verified)
 
-| Layer | Status |
-| --- | --- |
-| Shell | Dockview with 7 panels (problem statement, canvas, control, chat, timeline, lens tabs, inspector); layout persists to SQLite, restored on refresh |
-| Canvas | React Flow renders nodes/edges from store; drag persists position; click selects; inspector edits config fields (typed inputs from `ConfigField`), label, delete |
-| RPC | capnweb WS (`LoomServerApi`) + Web Worker postMessage (`SimEngineApi`), bidirectional callbacks both directions; plain `RpcResult` at the boundary (better-result objects don't serialize) |
-| Store | SQLite via Kysely: nodes/edges/trace/properties/workspace_meta; recursive-CTE up/downstream; JSON parse at boundaries; all Result-returning |
-| Engine | Pure TS, seeded mulberry32, read-then-write tick loop, behavior compile via `new Function()` with hash cache; tick/stock/variable/flow archetypes run for real |
-| Agent | Re-entrant tool loop (max 5 rounds), server-side dispatch table, `onAgentMutation` broadcast → client slice refresh; chat streams over capnweb |
-| Lens | Timeline lens plots stock/variable value from real trace |
-| Seed | Compound-interest example (stock + self-loop flow) works end to end: seed → run → scrub → curve |
+| Layer  | Status                                                                                                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shell  | Dockview with 7 panels (problem statement, canvas, control, chat, timeline, lens tabs, inspector); layout persists to SQLite, restored on refresh                                          |
+| Canvas | React Flow renders nodes/edges from store; drag persists position; click selects; inspector edits config fields (typed inputs from `ConfigField`), label, delete                           |
+| RPC    | capnweb WS (`LoomServerApi`) + Web Worker postMessage (`SimEngineApi`), bidirectional callbacks both directions; plain `RpcResult` at the boundary (better-result objects don't serialize) |
+| Store  | SQLite via Kysely: nodes/edges/trace/properties/workspace_meta; recursive-CTE up/downstream; JSON parse at boundaries; all Result-returning                                                |
+| Engine | Pure TS, seeded mulberry32, read-then-write tick loop, behavior compile via `new Function()` with hash cache; tick/stock/variable/flow archetypes run for real                             |
+| Agent  | Re-entrant tool loop (max 5 rounds), server-side dispatch table, `onAgentMutation` broadcast → client slice refresh; chat streams over capnweb                                             |
+| Lens   | Timeline lens plots stock/variable value from real trace                                                                                                                                   |
+| Seed   | Compound-interest example (stock + self-loop flow) works end to end: seed → run → scrub → curve                                                                                            |
 
 ### V1 must-do scorecard (design doc §V1 Scope)
 
-| # | Requirement | Status |
-| --- | --- | --- |
-| 1 | Graph w/ all 3 archetypes + passthrough/coded edges | Partial — process nodes stubbed, passthrough edges inert, no canvas authoring (agent/seed only) |
-| 2 | Write/generate behavior via CodeMirror | Missing — editor component exists but only as smoke test in control panel, not wired to node/edge behavior |
-| 3 | Deterministic sim + full traces | Partial — deterministic, but no input routing so tick nodes are isolated |
-| 4 | Scrub timeline | Done (basic slider + JSON dump) |
-| 5 | Rewind, modify, replay forward | Missing — `fromTick > 0` just relabels a fresh run (`tick-loop.ts:224`), no state resume |
-| 6 | Control panel: pinned auto-gen controls, instant re-sim | Missing — control panel is smoke-test leftovers |
-| 7 | Properties + batch verify | Missing — `verify`/`shrink` RPC are stubs, `properties` table unused |
-| 8 | Shrinker + investigate | Missing |
-| 9 | ≥2 lenses | Partial — timeline only (canvas arguably counts as topology) |
-| 10 | Dockview layout | Done |
-| 11 | Agent: mutate, suggest lenses, write properties, run verify | Partial — mutations only; no property/verify/sim/lens tools, no delete/update-edge tools |
-| 12 | Named snapshots | Missing — `listSnapshots` returns `[]`, `saveWorkspace` aliases `loadWorkspace` |
-| 13 | Undo/redo all mutations | Missing — workspace_meta-only stack exists server-side, not exposed via RPC or UI; graph mutations untracked |
-| 14 | Problem statement live editable | Done |
-| 15 | Agent CLI/MCP | Missing |
+| #   | Requirement                                                 | Status                                                                                                       |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | Graph w/ all 3 archetypes + passthrough/coded edges         | Partial — process nodes stubbed, passthrough edges inert, no canvas authoring (agent/seed only)              |
+| 2   | Write/generate behavior via CodeMirror                      | Missing — editor component exists but only as smoke test in control panel, not wired to node/edge behavior   |
+| 3   | Deterministic sim + full traces                             | Partial — deterministic, but no input routing so tick nodes are isolated                                     |
+| 4   | Scrub timeline                                              | Done (basic slider + JSON dump)                                                                              |
+| 5   | Rewind, modify, replay forward                              | Missing — `fromTick > 0` just relabels a fresh run (`tick-loop.ts:224`), no state resume                     |
+| 6   | Control panel: pinned auto-gen controls, instant re-sim     | Missing — control panel is smoke-test leftovers                                                              |
+| 7   | Properties + batch verify                                   | Missing — `verify`/`shrink` RPC are stubs, `properties` table unused                                         |
+| 8   | Shrinker + investigate                                      | Missing                                                                                                      |
+| 9   | ≥2 lenses                                                   | Partial — timeline only (canvas arguably counts as topology)                                                 |
+| 10  | Dockview layout                                             | Done                                                                                                         |
+| 11  | Agent: mutate, suggest lenses, write properties, run verify | Partial — mutations only; no property/verify/sim/lens tools, no delete/update-edge tools                     |
+| 12  | Named snapshots                                             | Missing — `listSnapshots` returns `[]`, `saveWorkspace` aliases `loadWorkspace`                              |
+| 13  | Undo/redo all mutations                                     | Missing — workspace_meta-only stack exists server-side, not exposed via RPC or UI; graph mutations untracked |
+| 14  | Problem statement live editable                             | Done                                                                                                         |
+| 15  | Agent CLI/MCP                                               | Missing                                                                                                      |
 
 ### Bugs / deviations found (fix in phase 3)
 
@@ -102,7 +102,7 @@ Read first: `src/engine/tick-loop.ts`, `src/engine/types.ts`, `src/engine/archet
   - Build a per-run topo order over non-flow edges; detect cycles, mark back-edges as 1-tick-delayed.
   - Route tick/process node `outputs` through passthrough edges into downstream `inputs` (same tick per Q1); port names from edge source/target ports, defaulting to output name.
   - Variables: compile `behavior` for a `value({ inputs, config, tick, rand })` fn; fall back to `config.amount`. Evaluate in topo order before flow rates.
-  - Fix `evalFlowRate` source: accept stock *or* variable value (gap 1); pass current-tick variable values, prev-tick stock values.
+  - Fix `evalFlowRate` source: accept stock _or_ variable value (gap 1); pass current-tick variable values, prev-tick stock values.
   - Fix gaps 4 (stock init via `init` behavior or schema-declared field, keep `initialBalance` fallback), 5 (compile-error state becomes `{ kind: "error", message }` variant in `EntityState`), 6 (passthrough snapshot state `{ kind: "passthrough", lastValue }`).
   - Tests: FIRE mini-model (salary variable → flow → savings stock) matches closed-form; DCF variable chain (`fcf = revenue - opex`) topo-evaluates same tick; two tick nodes A→B passthrough same-tick delivery; cycle A→B→A gets exactly one tick of delay; determinism preserved.
 - **3b. Process nodes + channel edges** (needs Q3 decided)

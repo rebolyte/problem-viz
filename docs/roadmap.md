@@ -16,11 +16,11 @@ The premise of this document: Loom's product promises — determinism, rewind, r
 - SQLite-as-graph-store with one-file-per-workspace makes snapshots trivially cheap later.
 - The agent tool loop is genuinely re-entrant (executes tools server-side, feeds results back, broadcasts mutations). Not pantomime.
 
-**But the heart of the vision doesn't exist yet.** The vision is about *interacting parts producing emergent behavior you can watch, rewind, and verify*. The prototype demonstrates one degenerate case: a single stock feeding itself. Specifically:
+**But the heart of the vision doesn't exist yet.** The vision is about _interacting parts producing emergent behavior you can watch, rewind, and verify_. The prototype demonstrates one degenerate case: a single stock feeding itself. Specifically:
 
 1. **Nodes cannot talk to each other.** Tick nodes always receive empty inputs; outputs are captured but never routed; passthrough edges are inert; flow edges read source values only from stocks. None of the five validation domains in the design doc except compound interest can be expressed. The entire "Archetype Interop" section of the vision is unimplemented.
-2. **Time semantics are undefined.** "Deterministic rewind and replay" is only meaningful if what a tick *means* is precisely specified — what evaluates in what order, when a message emitted at tick t arrives, what snapshot t contains. Today those semantics are implicit in loop code and partially wrong. Braid-style rewind on vague semantics is a scrubber over noise.
-3. **Determinism can silently rot.** Compiled behaviors (`new Function`) see all globals — a user or agent writing `Math.random()` or `Date.now()` in a node body breaks replay *silently*: the trace still renders, properties still "check", the answers are just wrong on re-run. The engine also iterates in graph-array order, so adding an unrelated node reshuffles every node's randomness. Determinism is currently a claim, not an enforced invariant.
+2. **Time semantics are undefined.** "Deterministic rewind and replay" is only meaningful if what a tick _means_ is precisely specified — what evaluates in what order, when a message emitted at tick t arrives, what snapshot t contains. Today those semantics are implicit in loop code and partially wrong. Braid-style rewind on vague semantics is a scrubber over noise.
+3. **Determinism can silently rot.** Compiled behaviors (`new Function`) see all globals — a user or agent writing `Math.random()` or `Date.now()` in a node body breaks replay _silently_: the trace still renders, properties still "check", the answers are just wrong on re-run. The engine also iterates in graph-array order, so adding an unrelated node reshuffles every node's randomness. Determinism is currently a claim, not an enforced invariant.
 4. **The three-mode cycle has one mode, partially.** Explore exists in skeletal form. Verify and Investigate — the modes that differentiate Loom from a diagramming toy — are stubs. Undo-as-trust (design principle 5) is absent while the agent already has live mutation power.
 5. **The agent can build but not observe.** It mutates the graph but cannot run a simulation, read a trace, declare a property, or verify — half the collaboration loop from the vision's "Agent Integration with Verification" section is missing, and the trace lives in the browser where the server-side agent can't reach it.
 
@@ -30,18 +30,18 @@ None of this is architectural damage — it's unbuilt floors on a sound foundati
 
 Every phase below traces to these. V1 is done when all ten pass their stated verification.
 
-| ID | Capability | Verified by |
-| --- | --- | --- |
-| C1 | Model interacting systems in all archetypes (the 5 design-doc domains) | Fixture suite (Part 3) — each domain is an executable test |
-| C2 | Run deterministically, fast, with errors as values | Semantics tests S1–S9 + perf budget bench |
-| C3 | Scrub to any tick instantly; canvas and lenses reflect that tick | Journey J2 + store selectors tests |
-| C4 | Iterate: change config/behavior, replay; change-at-tick preserves prefix | S6 property test + journey J3 |
-| C5 | See: state-on-canvas + ≥2 lenses + lens suggestion | Journeys J2, J5 |
-| C6 | Author as human (canvas + editor) and as agent (tools) with parity | Tool-parity checklist + journeys J1, J4 |
-| C7 | Trust: undo/redo everything including agent turns; named snapshots | Command-log inverse tests + journey J4 |
-| C8 | Verify: invariant + liveness properties across thousands of seeds, headless | Batch-runner tests on ws-protocol fixture |
-| C9 | Investigate: shrink to minimal repro, load into explorer at failing tick | Shrinker monotonicity tests + journey J5 |
-| C10 | Steer: problem statement feeds agent context and lens suggestions | Prompt-assembly test + J5 |
+| ID  | Capability                                                                  | Verified by                                                |
+| --- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| C1  | Model interacting systems in all archetypes (the 5 design-doc domains)      | Fixture suite (Part 3) — each domain is an executable test |
+| C2  | Run deterministically, fast, with errors as values                          | Semantics tests S1–S9 + perf budget bench                  |
+| C3  | Scrub to any tick instantly; canvas and lenses reflect that tick            | Journey J2 + store selectors tests                         |
+| C4  | Iterate: change config/behavior, replay; change-at-tick preserves prefix    | S6 property test + journey J3                              |
+| C5  | See: state-on-canvas + ≥2 lenses + lens suggestion                          | Journeys J2, J5                                            |
+| C6  | Author as human (canvas + editor) and as agent (tools) with parity          | Tool-parity checklist + journeys J1, J4                    |
+| C7  | Trust: undo/redo everything including agent turns; named snapshots          | Command-log inverse tests + journey J4                     |
+| C8  | Verify: invariant + liveness properties across thousands of seeds, headless | Batch-runner tests on ws-protocol fixture                  |
+| C9  | Investigate: shrink to minimal repro, load into explorer at failing tick    | Shrinker monotonicity tests + journey J5                   |
+| C10 | Steer: problem statement feeds agent context and lens suggestions           | Prompt-assembly test + J5                                  |
 
 ### Top risks this plan is designed to kill
 
@@ -59,7 +59,7 @@ Every phase below traces to these. V1 is done when all ten pass their stated ver
 Phase 3 task 0 copies these rules into `docs/semantics.md` as the living spec. Every rule gets at least one test whose name carries the rule ID (e.g. `test("S4: entity array order does not affect trace", ...)`). Changing a rule requires changing spec + tests in one commit. These are **decisions, not options** — flagged items are the ones worth a veto before phase 3 starts.
 
 - **S1 — Discrete time.** A run over `[0, N]` emits N+1 snapshots. Snapshot 0 is initialized state before any step. Snapshot t (t ≥ 1) is the state after step t completes.
-- **S2 — Step order within a tick** *(veto-worthy: this is the semantic core)*:
+- **S2 — Step order within a tick** _(veto-worthy: this is the semantic core)_:
   1. **Variables** evaluate in topological order over passthrough dependencies, reading current-tick upstream variable values and previous-tick stock/tick/process values.
   2. **Flow rates** evaluate from current-tick variable values and previous-tick stock values.
   3. **Stocks** integrate: `v' = v + Σ inflows − Σ outflows` (Euler step from previous-tick stock values).
@@ -67,20 +67,20 @@ Phase 3 task 0 copies these rules into `docs/semantics.md` as the living spec. E
   5. **Tick and process nodes** step in topological order, receiving same-tick passthrough inputs from upstream nodes that stepped earlier in this tick, plus this tick's channel deliveries.
 - **S3 — Wire vs register.** Passthrough edges are combinational: delivery within the same tick, subject to topo order. Channel edges are sequential: a message emitted at tick t is available to targets no earlier than t+1 (plus configured latency). Cycles among passthrough edges are broken at back-edges, which behave as 1-tick delays. (Digital-circuit analogy: passthrough = wire, channel/back-edge = register.)
 - **S4 — Entity-order independence.** Engine iteration uses topological order with ties broken by entity id (lexicographic) — never by array position. Permuting the `nodes`/`edges` arrays of a GraphDef yields a bit-identical trace.
-- **S5 — Capability injection.** Compiled behaviors receive *only* injected capabilities (`state/ctx`, `inputs`, `config`, `tick`, `rand`, and for process nodes `emit`/`wait`). `Math.random`, `Date`, `performance`, and `crypto` are shadowed in the compiled scope to throw with "use rand from context". Determinism by construction, and a first step toward sandboxing.
+- **S5 — Capability injection.** Compiled behaviors receive _only_ injected capabilities (`state/ctx`, `inputs`, `config`, `tick`, `rand`, and for process nodes `emit`/`wait`). `Math.random`, `Date`, `performance`, and `crypto` are shadowed in the compiled scope to throw with "use rand from context". Determinism by construction, and a first step toward sandboxing.
 - **S6 — Overrides and replay.** `RunConfig.configOverrides` merges per-entity config before tick 0. `changesAtTick: { tick, configOverrides }` applies overrides from that tick onward; ticks before it are bit-identical to the base run (same seed, same effective config until t). Replay is always re-execution from tick 0 — no state injection, ever. Determinism makes re-execution exact; V1 scale makes it cheap.
 - **S7 — Per-entity randomness.** Each entity gets its own PRNG stream seeded by `hash(runSeed, entityId)`. Adding or removing one entity does not change any other entity's random sequence.
 - **S8 — Errors are values.** A behavior compile failure or runtime throw never aborts the run. The entity enters `{ kind: "error", phase: "compile" | "runtime", message, tick }` state, sticky for the rest of the run, rendered distinctly, and visible to property checks. Correct archetype identity is preserved in the error record (fixes the current "everything becomes kind:tick" bug).
 - **S9 — No silent numeric coercion.** A non-finite flow rate, stock value, or variable value puts the entity in error state (S8). Never coerce NaN/Infinity to 0 — a finance model with silent zeros produces plausible-looking wrong answers, the worst failure mode a thinking tool can have. (Current code silently 0s several paths; change it.)
 - **S10 — Flow conservation.** A stock→stock flow edge conserves: −r from source, +r to target per tick. A self-loop flow (source === target) is a source/sink shortcut: net inflow r (may be negative), reading the stock's own previous value — this is the compound-interest idiom. A flow whose source is a variable draws from a cloud (no depletion), matching system-dynamics tradition. Property: in a graph whose flows are all stock→stock non-self-loop, total stock sum is constant across ticks.
-- **S11 — Trace provenance.** Every graph mutation increments a `graphVersion` counter (server-side). Every run stamps the trace with the version it ran against. A trace whose version trails the current graph is *stale* and the UI must say so — a stale trace is a static picture, and static pictures lie.
+- **S11 — Trace provenance.** Every graph mutation increments a `graphVersion` counter (server-side). Every run stamps the trace with the version it ran against. A trace whose version trails the current graph is _stale_ and the UI must say so — a stale trace is a static picture, and static pictures lie.
 - **S12 — Snapshot sufficiency.** For tick/stock/variable/flow/channel entities, the snapshot state alone suffices to render lenses and evaluate property checks at that tick. Process nodes expose `{ ctx, status: "running" | "waiting" | "done" }`; their internal generator position is deliberately not serialized (S6 re-execution covers rewind).
 
 ### Architecture decisions (carried from the audit, now resolved)
 
 - **D1** Verify runs server-side: `node:worker_threads` pool over the same engine (bundled like the existing sim-worker bundle). The browser worker stays for interactive runs — two consumers, one pure engine.
 - **D2** Property checks are TypeScript compiled like behaviors, with context `({ nodes, edges, tick })` where `nodes` is keyed by a new unique human `name` field on nodes (one migration; nanoid ids stay as the machine key).
-- **D3** Verify stores per-seed verdicts only (pass/fail + first violation tick + property id). Failing traces are regenerated on demand by deterministic re-run. Determinism *is* the storage format.
+- **D3** Verify stores per-seed verdicts only (pass/fail + first violation tick + property id). Failing traces are regenerated on demand by deterministic re-run. Determinism _is_ the storage format.
 - **D4** The agent gets `run_simulation`, `read_trace`, `run_verify`, `add_property` tools backed by server-side headless runs persisted to the existing `trace` table. This closes the build-but-can't-observe gap.
 - **D5** Undo/redo is a server-side command log: every store mutation records `{ op, inverse, batchId }`; one agent conversation turn = one batch; undo applies inverses and broadcasts. **Ships with the authoring UI (phase 5), not after** — trust must arrive before we hand more power to the agent and before humans build models worth protecting.
 - **D6** Named snapshots = SQLite file copy under `data/snapshots/<name>.sqlite` + RPC to save/list/load. Atomic, includes everything.
@@ -92,23 +92,23 @@ Phase 3 task 0 copies these rules into `docs/semantics.md` as the living spec. E
 
 ## Part 3 — The development harness
 
-This is how we and the agents *know* the thing works. Built in phase 3 task 0, before any new engine feature, then extended per phase. New dev dependency: `fast-check`. Optional but recommended: `@playwright/test` for journeys.
+This is how we and the agents _know_ the thing works. Built in phase 3 task 0, before any new engine feature, then extended per phase. New dev dependency: `fast-check`. Optional but recommended: `@playwright/test` for journeys.
 
 ### 3.1 Test pyramid
 
-| Layer | What | Where | Runs |
-| --- | --- | --- | --- |
-| L0 unit | Pure function tests (existing 87) | colocated `*.test.ts` | every commit |
-| L1 property | fast-check over generated graphs/configs attacking S-rules | `src/engine/semantics/*.test.ts` | every commit (fixed FC seed in CI, random locally) |
-| L2 oracle | Domain fixtures with closed-form/reference expectations | `src/fixtures/*.ts` + `*.test.ts` | every commit |
-| L3 differential | Client `run()` vs server headless runner: identical trace JSON per fixture | `src/server/verify/differential.test.ts` (from phase 4) | every commit |
-| L4 RPC e2e | Server on ephemeral port + capnweb client, full loops (agent tool → mutation → sim → trace) | `src/e2e/*.test.ts` (harness pattern exists in `src/server/utils/harness.ts`) | every commit |
-| L5 journeys | Scripted browser flows against `bun server.ts` | `e2e/journeys/*.spec.ts` (Playwright) | pre-merge / on demand |
-| L6 bench | Perf budgets as regression gates | `src/engine/bench.test.ts` | pre-merge |
+| Layer           | What                                                                                        | Where                                                                         | Runs                                               |
+| --------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
+| L0 unit         | Pure function tests (existing 87)                                                           | colocated `*.test.ts`                                                         | every commit                                       |
+| L1 property     | fast-check over generated graphs/configs attacking S-rules                                  | `src/engine/semantics/*.test.ts`                                              | every commit (fixed FC seed in CI, random locally) |
+| L2 oracle       | Domain fixtures with closed-form/reference expectations                                     | `src/fixtures/*.ts` + `*.test.ts`                                             | every commit                                       |
+| L3 differential | Client `run()` vs server headless runner: identical trace JSON per fixture                  | `src/server/verify/differential.test.ts` (from phase 4)                       | every commit                                       |
+| L4 RPC e2e      | Server on ephemeral port + capnweb client, full loops (agent tool → mutation → sim → trace) | `src/e2e/*.test.ts` (harness pattern exists in `src/server/utils/harness.ts`) | every commit                                       |
+| L5 journeys     | Scripted browser flows against `bun server.ts`                                              | `e2e/journeys/*.spec.ts` (Playwright)                                         | pre-merge / on demand                              |
+| L6 bench        | Perf budgets as regression gates                                                            | `src/engine/bench.test.ts`                                                    | pre-merge                                          |
 
 ### 3.2 Property arbitraries (`src/engine/testing/arbitraries.ts`)
 
-Generating arbitrary *code* is not useful; generating arbitrary *structure over vetted behaviors* is. Build:
+Generating arbitrary _code_ is not useful; generating arbitrary _structure over vetted behaviors_ is. Build:
 
 - `arbBehavior(kind)` — picks from a pool of ~10 parameterized behavior templates per archetype (counter, accumulator, echo, threshold-alarm, lossy-channel, proportional-flow, …), instantiated with generated numeric params. Every template is individually oracle-tested, so structural generation explores composition, not syntax.
 - `arbGraph` — small graphs (2–12 nodes) mixing archetypes: DAG segments, deliberate passthrough cycles, self-loop flows, stock chains, process pairs over channels. Shrinks toward fewer entities (fast-check's shrinking gives us minimal counterexamples of our own engine bugs — dogfooding the Investigate mode's philosophy on ourselves).
@@ -126,16 +126,16 @@ Core properties (each tagged with its S-rule):
 
 ### 3.3 Oracle fixtures (`src/fixtures/`)
 
-One module per design-doc domain. Each exports `buildGraph(): GraphDef`, `oracle` (closed-form or reference implementation), and `properties` (used later as *user-level* Loom properties — the fixtures graduate into seed examples and verify-mode test subjects). These are the acceptance tests for C1.
+One module per design-doc domain. Each exports `buildGraph(): GraphDef`, `oracle` (closed-form or reference implementation), and `properties` (used later as _user-level_ Loom properties — the fixtures graduate into seed examples and verify-mode test subjects). These are the acceptance tests for C1.
 
-| Fixture | Exercises | Oracle |
-| --- | --- | --- |
-| `compound-interest` | stock + self-loop flow | `P(1+r)^t` analytical |
-| `fire` | variable → flow → stock chains, liveness ("FIRE by tick N") | closed-form annuity accumulation |
-| `dcf` | derived-variable topo chains (`fcf = revenue − opex − capex − tax`), NPV accumulator stock | spreadsheet-style reference calc in the test |
-| `ws-protocol` | **north star**: 2 process nodes, lossy/latency channel edge, send/ack/retry, invariant ("no message loss") + liveness ("seq converges") | hand-computed traces for fixed seeds + invariants |
-| `pert` | tick nodes + dependency structural edges + resource stock | reference critical-path algorithm |
-| `traffic` (stretch) | tick state machines + process cars + road channels | invariant only ("no conflicting greens") |
+| Fixture             | Exercises                                                                                                                               | Oracle                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `compound-interest` | stock + self-loop flow                                                                                                                  | `P(1+r)^t` analytical                             |
+| `fire`              | variable → flow → stock chains, liveness ("FIRE by tick N")                                                                             | closed-form annuity accumulation                  |
+| `dcf`               | derived-variable topo chains (`fcf = revenue − opex − capex − tax`), NPV accumulator stock                                              | spreadsheet-style reference calc in the test      |
+| `ws-protocol`       | **north star**: 2 process nodes, lossy/latency channel edge, send/ack/retry, invariant ("no message loss") + liveness ("seq converges") | hand-computed traces for fixed seeds + invariants |
+| `pert`              | tick nodes + dependency structural edges + resource stock                                                                               | reference critical-path algorithm                 |
+| `traffic` (stretch) | tick state machines + process cars + road channels                                                                                      | invariant only ("no conflicting greens")          |
 
 Rule: **an engine phase is complete when its fixtures pass, not when its unit tests pass.**
 
@@ -181,7 +181,7 @@ Agent prompt preamble (paste verbatim when delegating):
 
 ## Part 4 — Build plan
 
-Ordering principle: after the engine (a prerequisite for everything), phases follow **value density, not architectural convenience**. The value ranking: (1) the agent-grounding loop — agent builds *and observes* models; (2) the Investigate bridge — from failure to scrubber-parked understanding; (3) explore/scrub UX; (4) verify-at-scale; (5) lens variety. The cycle is the product: a thin closed loop beats any single polished layer, so ship the loop thin and deepen later. A cut line at the end of this part lists what can slip without harming the value proposition.
+Ordering principle: after the engine (a prerequisite for everything), phases follow **value density, not architectural convenience**. The value ranking: (1) the agent-grounding loop — agent builds _and observes_ models; (2) the Investigate bridge — from failure to scrubber-parked understanding; (3) explore/scrub UX; (4) verify-at-scale; (5) lens variety. The cycle is the product: a thin closed loop beats any single polished layer, so ship the loop thin and deepen later. A cut line at the end of this part lists what can slip without harming the value proposition.
 
 **How a phase executes.** This roadmap is the map, not the turn-by-turn. Each numbered task below is roughly one agent session; each phase's **Acceptance** line is its exit gate. Before implementation of a phase starts, the assigned engineer/agent writes `docs/plans/<n>-<phase-name>.md` in the style of `2-engine.md`: the phase's tasks broken into commit-sized steps, each naming (a) the failing tests to write first (use the test names given below where present — S-rule tags, fixture oracles, journey ids), (b) files created/modified, (c) the check that closes the step. Review that plan against this doc's task list and acceptance gate before writing code. This keeps file-level detail generated fresh at execution time — where it's accurate — instead of frozen here where it would rot. A task without a nameable failing test is not ready to implement; take that back to the plan.
 
@@ -189,9 +189,9 @@ Ordering principle: after the engine (a prerequisite for everything), phases fol
 
 Read first: `src/engine/tick-loop.ts`, `src/engine/types.ts`, `src/engine/archetypes/*`, `src/engine/compile/compile-behavior.ts`, this doc Parts 2–3.
 
-- **3.0 Spec + harness scaffolding.** Write `docs/semantics.md` from Part 2 (S1–S12). Add `fast-check`. Create `src/engine/testing/arbitraries.ts`, `src/fixtures/` (move the compound-interest seed builder here; add oracle test `P(1+r)^t`). Add CI workflow + mise tasks (3.6). Write properties 1 and 7 from 3.2 against the *current* engine — they should pass and become the ratchet.
+- **3.0 Spec + harness scaffolding.** Write `docs/semantics.md` from Part 2 (S1–S12). Add `fast-check`. Create `src/engine/testing/arbitraries.ts`, `src/fixtures/` (move the compound-interest seed builder here; add oracle test `P(1+r)^t`). Add CI workflow + mise tasks (3.6). Write properties 1 and 7 from 3.2 against the _current_ engine — they should pass and become the ratchet.
 - **3.1 Canonical ordering + capability injection.** Topo order with id tie-break (S4); shadow `Math`/`Date`/`performance`/`crypto` in compiled behaviors (S5); error-state variant in `EntityState` with correct archetype identity (S8) and NaN policy (S9). Properties 2 and 6 written first, failing, then green.
-- **3.2 Routing + derived variables.** Route tick/process outputs through passthrough edges into downstream inputs same-tick per S2/S3; back-edge delay for cycles. Variables compile a `value({ inputs, config, tick, rand })` behavior, evaluated topo-first; flow rates accept stock *and* variable sources (fixes the FIRE-breaking bug at `tick-loop.ts:86`); stock init per D9; passthrough snapshot state `{ kind: "passthrough", lastValue }`. Fixtures first: `fire` and `dcf` written failing, then green. Two-tick-node same-tick delivery test; cycle 1-tick-delay test.
+- **3.2 Routing + derived variables.** Route tick/process outputs through passthrough edges into downstream inputs same-tick per S2/S3; back-edge delay for cycles. Variables compile a `value({ inputs, config, tick, rand })` behavior, evaluated topo-first; flow rates accept stock _and_ variable sources (fixes the FIRE-breaking bug at `tick-loop.ts:86`); stock init per D9; passthrough snapshot state `{ kind: "passthrough", lastValue }`. Fixtures first: `fire` and `dcf` written failing, then green. Two-tick-node same-tick delivery test; cycle 1-tick-delay test.
 - **3.3 Process nodes + channel edges.** Generator scheduler: compile `run`, drive per-node iterator, `emit` buffers into routing, `yield wait.for(port, timeout)` / `wait.ticks(n)` suspend/resume at tick boundaries (S2 step 5, S3 register rule). Channel edges compile `tick({ state, pending, config, tick, rand })` returning `{ state, deliver }`; snapshot real pending counts. While building routing, snapshots also gain routed-message records `{ edgeId, from, to, payload }` (shallow payloads) — the sequence lens needs them and retrofitting message capture later is costlier; extend S12 in the same commit. Fixture first: `ws-protocol` — the north star — written failing with its invariants, then green. Loss/latency reproducible per seed.
 - **3.4 PRNG streams + overrides + replay.** Per-entity streams `hash(seed, entityId)` (S7); apply `configOverrides` and `changesAtTick` (S6). Properties 3 and 4 first, then green. Conservation property 5 (S10).
 
@@ -219,9 +219,9 @@ Read first: `src/client/shell/*`, `src/client/canvas/graph-canvas.tsx`, `src/cli
 - **5.2 Transport.** Seed + tick-count inputs, play/pause (rAF over `currentTick`), run status; kill the hardcoded `{ seed: 42, toTick: 50 }`.
 - **5.3 Undo/redo (D5).** Command log with inverses and batch ids in the graph store; agent turn = one batch; `undo`/`redo` RPC + buttons + shortcuts; mutation broadcasts refresh clients. Tests: inverse round-trip per op type; batch undo restores exact pre-turn state (in-memory SQLite harness exists). Trust ships in the same phase as the authoring UI, not after.
 - **5.4 State-on-canvas + provenance.** Custom React Flow renderers (`node-types.tsx` finally used): label, kind badge, current-tick state summary, error styling. `graphVersion` stamping + stale-trace banner (S11).
-- **5.5 Sequence lens (moved up).** Swimlanes per node, message arrows from the phase-3.3 message records, cursor synced to scrubber. Plain SVG. Moved ahead of other lenses because the north-star demo is *watching the protocol run* — without it the flagship domain renders as a JSON dump.
+- **5.5 Sequence lens (moved up).** Swimlanes per node, message arrows from the phase-3.3 message records, cursor synced to scrubber. Plain SVG. Moved ahead of other lenses because the north-star demo is _watching the protocol run_ — without it the flagship domain renders as a JSON dump.
 - **5.6 Canvas authoring, minimal.** `onConnect` → addEdge with kind picker; simple add-node menu per archetype seeded with fixture behavior templates; edge delete. Control panel drops its smoke-test editor/JSON dump; gains fixture seed buttons. Palette polish deferred.
-- **5.7 Slider re-sim, scoped (D7).** Numeric config fields of the *selected* node render as sliders in the inspector; drag → debounced worker re-sim via overrides; release → persist. The pin/unpin control-panel infrastructure is below the cut line — one node's sliders deliver the scrub-and-see experience.
+- **5.7 Slider re-sim, scoped (D7).** Numeric config fields of the _selected_ node render as sliders in the inspector; drag → debounced worker re-sim via overrides; release → persist. The pin/unpin control-panel infrastructure is below the cut line — one node's sliders deliver the scrub-and-see experience.
 
 Acceptance: journeys J1–J4 green (J3 scoped to inspector sliders). Manual north-star check: build the FIRE model in the UI, drag savings-rate, watch the FIRE date move; run ws-protocol and watch messages flow in the sequence lens.
 
@@ -230,13 +230,13 @@ Acceptance: journeys J1–J4 green (J3 scoped to inspector sliders). Manual nort
 Read first: `src/server/graph/store.ts` (properties/trace tables), `src/server/rpc/loom-server-impl.ts`, design doc §Property & Verification.
 
 - **6.1 Node names + property CRUD (D2).** Migration: unique `name` on nodes; store + RPC + panel (list, enable/disable, CodeMirror check source, compile-on-save). Invariant + liveness kinds; statistical stays V2.
-- **6.2 Explore-mode property checking first.** Every *interactive* run evaluates enabled properties in the worker; a violation parks the scrubber at the violating tick and highlights the property + entities. This delivers the Investigate experience — the #2 value — before any batch infrastructure exists, and makes properties part of the daily explore loop rather than a separate mode you have to visit.
+- **6.2 Explore-mode property checking first.** Every _interactive_ run evaluates enabled properties in the worker; a violation parks the scrubber at the violating tick and highlights the property + entities. This delivers the Investigate experience — the #2 value — before any batch infrastructure exists, and makes properties part of the daily explore loop rather than a separate mode you have to visit.
 - **6.3 Batch runner + report.** Grow the phase-4.1 runner into a pool; `verify({ seeds, workers, properties })` evaluates checks per tick in-worker, fail-fast, verdicts only (D3), streaming `onVerifyProgress`; verify panel: per-property pass counts, failing seeds, first violations.
 - **6.4 Shrinker.** Dimensions per design doc: tick count (binary search), config values (halve toward defaults), seed neighborhood (±k). Tests: monotonicity (each accepted shrink step still fails the property) and idempotence on a constructed failure.
 - **6.5 Investigate loading.** `loadFailure` → client re-runs that seed/config (D3), scrubber parked at violation tick, property + failing predicate shown, offending entities highlighted — same surface as 6.2, fed by batch results.
 - **6.6 Agent verify tools.** `add_property`, `run_verify` complete the D4 surface. E2e: agent builds ws-protocol from a prompt (fake LLM script), declares a property, runs verify, reads the report.
 
-Honesty rule for all verify UI and agent-facing copy: a green result means *the model* satisfies the property across N seeds — never imply the modeled system is verified. Loom builds correct understanding; it does not certify implementations.
+Honesty rule for all verify UI and agent-facing copy: a green result means _the model_ satisfies the property across N seeds — never imply the modeled system is verified. Loom builds correct understanding; it does not certify implementations.
 
 Acceptance: the design doc's verify narrative runs end to end on the ws-protocol fixture: declare "no message loss" → 1,000 seeds → failures found → shrunk → explorer parked at the failing tick. Journey J5 green.
 
@@ -267,7 +267,7 @@ If time pressure hits, cut from the bottom up — everything below preserves the
 5. Named snapshots (copy the SQLite file by hand)
 6. Canvas palette polish (agent authors; `onConnect` + minimal menu suffice)
 
-Not cuttable, ever: the semantics spec and its tests, determinism properties, the fixtures, undo, and any phase-4/6 item — those *are* the product.
+Not cuttable, ever: the semantics spec and its tests, determinism properties, the fixtures, undo, and any phase-4/6 item — those _are_ the product.
 
 ### V1 exit criterion — the demo script
 
