@@ -11,21 +11,28 @@ const makeNode = (config: Record<string, unknown>): NodeDef => ({
 });
 
 test("amount=5 returns value 5", () => {
-  expect(runVariable(makeNode({ amount: 5 }))).toEqual({ kind: "variable", value: 5 });
+  expect(runVariable(makeNode({ amount: 5 }), 0)).toEqual({ kind: "variable", value: 5 });
 });
 
-test("missing amount returns value 0", () => {
-  expect(runVariable(makeNode({}))).toEqual({ kind: "variable", value: 0 });
+test("missing amount defaults to 0", () => {
+  expect(runVariable(makeNode({}), 0)).toEqual({ kind: "variable", value: 0 });
 });
 
 test("string amount is coerced", () => {
-  expect(runVariable(makeNode({ amount: "7" }))).toEqual({ kind: "variable", value: 7 });
+  expect(runVariable(makeNode({ amount: "7" }), 0)).toEqual({ kind: "variable", value: 7 });
 });
 
-test("NaN amount returns 0", () => {
-  expect(runVariable(makeNode({ amount: NaN }))).toEqual({ kind: "variable", value: 0 });
+test("S9: NaN amount is an error state, not 0", () => {
+  const state = runVariable(makeNode({ amount: NaN }), 3);
+  expect(state).toEqual({
+    kind: "error",
+    archetype: "variable",
+    phase: "runtime",
+    message: expect.stringContaining("n1"),
+    tick: 3,
+  });
 });
 
-test("garbage string returns 0", () => {
-  expect(runVariable(makeNode({ amount: "abc" }))).toEqual({ kind: "variable", value: 0 });
+test("S9: garbage string amount is an error state, not 0", () => {
+  expect(runVariable(makeNode({ amount: "abc" }), 0).kind).toBe("error");
 });

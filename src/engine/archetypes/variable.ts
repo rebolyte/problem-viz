@@ -1,6 +1,18 @@
-import type { NodeDef, EntityState } from "../types.ts";
+import type { EntityState, ErrorEntityState, NodeDef } from "../types.ts";
+import { errorState } from "../errors.ts";
 
-export const runVariable = (node: NodeDef): Extract<EntityState, { kind: "variable" }> => {
+export const runVariable = (
+  node: NodeDef,
+  tick: number,
+): Extract<EntityState, { kind: "variable" }> | ErrorEntityState => {
   const amount = Number(node.config.amount ?? 0);
-  return { kind: "variable", value: Number.isFinite(amount) ? amount : 0 };
+  if (!Number.isFinite(amount)) {
+    return errorState(
+      "variable",
+      "runtime",
+      `Node ${node.id} amount is not finite: ${String(node.config.amount)}`,
+      tick,
+    );
+  }
+  return { kind: "variable", value: amount };
 };

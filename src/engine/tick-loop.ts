@@ -1,5 +1,6 @@
 import { Result } from "better-result";
-import type { GraphDef, NodeDef, RunConfig, TickSnapshot, EntityState } from "./types.ts";
+import type { EntityState, GraphDef, NodeDef, RunConfig, TickSnapshot } from "./types.ts";
+import { errorState } from "./errors.ts";
 import { makePrng } from "./prng.ts";
 import {
   compileNodeBehavior,
@@ -13,41 +14,42 @@ import { evalFlowRate } from "./archetypes/flow-edge.ts";
 import { runTick, initTickContext } from "./archetypes/tick.ts";
 
 type StockState = Extract<EntityState, { kind: "stock" }>;
-type NodeState = EntityState;
 
 type SimState = {
-  nodes: Map<string, NodeState>;
+  nodes: Map<string, EntityState>;
+  edges: Map<string, EntityState>;
 };
 
 const STRUCTURAL_EDGE_KINDS = new Set(["dependency", "ownership", "causation"]);
 
+const errMessage = (result: { error: unknown }): string => {
+  const error = result.error as { message?: string } | undefined;
+  return error?.message ?? String(result.error);
+};
+
 const initialNodeState = (
   node: NodeDef,
   compiled: Result<CompiledNodeBehavior, unknown>,
-): NodeState => {
+  tick: number,
+): EntityState => {
   if (!compiled.isOk()) {
-    return {
-      kind: "tick",
-      context: { compileError: String((compiled as { error: unknown }).error) },
-      outputs: {},
-    };
+    return errorState(node.kind, "compile", errMessage(compiled as { error: unknown }), tick);
   }
 
   if (node.kind === "stock") {
-    return initStock(node);
+    return initStock(node, tick);
   }
 
   if (node.kind === "variable") {
-    return runVariable(node);
+    return runVariable(node, tick);
   }
 
   if (node.kind === "tick") {
     const ctx = initTickContext(node, compiled.value);
-    return {
-      kind: "tick",
-      context: ctx.isOk() ? ctx.value : { compileError: String((ctx as { error: unknown }).error) },
-      outputs: {},
-    };
+    if (!ctx.isOk()) {
+      return errorState(node.kind, "runtime", errMessage(ctx as { error: unknown }), tick);
+    }
+    return { kind: "tick", context: ctx.value, outputs: {} };
   }
 
   if (node.kind === "process") {
@@ -57,12 +59,37 @@ const initialNodeState = (
   return { kind: "tick", context: null, outputs: {} };
 };
 
+const initialEdgeState = (
+  edgeKind: string,
+  compiled: Result<CompiledEdgeBehavior, unknown> | undefined,
+  tick: number,
+): EntityState => {
+  if (edgeKind === "flow") {
+    if (compiled && !compiled.isOk()) {
+      return errorState("flow", "compile", errMessage(compiled as { error: unknown }), tick);
+    }
+    return { kind: "flow", rate: 0 };
+  }
+  return { kind: "channel", pending: 0 };
+};
+
 const initialState = (
   graph: GraphDef,
   compiledNodes: Map<string, Result<CompiledNodeBehavior, unknown>>,
+  compiledEdges: Map<string, Result<CompiledEdgeBehavior, unknown>>,
+  fromTick: number,
 ): SimState => ({
   nodes: new Map(
-    graph.nodes.map((node) => [node.id, initialNodeState(node, compiledNodes.get(node.id)!)]),
+    graph.nodes.map((node) => [
+      node.id,
+      initialNodeState(node, compiledNodes.get(node.id)!, fromTick),
+    ]),
+  ),
+  edges: new Map(
+    graph.edges.map((edge) => [
+      edge.id,
+      initialEdgeState(edge.kind, compiledEdges.get(edge.id), fromTick),
+    ]),
   ),
 });
 
@@ -72,58 +99,121 @@ const stepTick = (
   compiledEdges: Map<string, Result<CompiledEdgeBehavior, unknown>>,
   prev: SimState,
   meta: { tick: number; rand: () => number },
-): { state: SimState; snapshot: TickSnapshot } => {
+): SimState => {
   const flowEdges = graph.edges.filter((e) => e.kind === "flow");
 
-  const flowRates = new Map<string, number>();
-  for (const edge of flowEdges) {
-    const compiledEdge = compiledEdges.get(edge.id);
-    if (!compiledEdge?.isOk()) {
-      flowRates.set(edge.id, 0);
+  const nextEdges = new Map<string, EntityState>();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "flow") {
+      nextEdges.set(edge.id, prev.edges.get(edge.id) ?? { kind: "channel", pending: 0 });
       continue;
     }
+
+    const prevEdgeState = prev.edges.get(edge.id);
+    if (prevEdgeState?.kind === "error") {
+      nextEdges.set(edge.id, prevEdgeState);
+      continue;
+    }
+
     const sourceState = prev.nodes.get(edge.source.node);
+    if (sourceState?.kind === "error") {
+      nextEdges.set(
+        edge.id,
+        errorState(
+          "flow",
+          "runtime",
+          `Edge ${edge.id} source ${edge.source.node} is in error state`,
+          meta.tick,
+        ),
+      );
+      continue;
+    }
+
+    const compiledEdge = compiledEdges.get(edge.id)!;
+    if (!compiledEdge.isOk()) {
+      nextEdges.set(
+        edge.id,
+        errorState("flow", "compile", errMessage(compiledEdge as { error: unknown }), meta.tick),
+      );
+      continue;
+    }
+
     const sourceValue = sourceState?.kind === "stock" ? sourceState.value : 0;
     const rateResult = evalFlowRate(edge, compiledEdge.value, {
       sourceValue,
       tick: meta.tick,
       rand: meta.rand,
     });
-    flowRates.set(edge.id, rateResult.isOk() ? rateResult.value : 0);
+    if (rateResult.isOk()) {
+      nextEdges.set(edge.id, { kind: "flow", rate: rateResult.value });
+    } else {
+      nextEdges.set(
+        edge.id,
+        errorState("flow", "runtime", errMessage(rateResult as { error: unknown }), meta.tick),
+      );
+    }
   }
 
-  const nextNodes = new Map<string, NodeState>();
+  const nextNodes = new Map<string, EntityState>();
 
   for (const node of graph.nodes) {
-    const compiled = compiledNodes.get(node.id);
+    const prevState = prev.nodes.get(node.id);
+    if (prevState?.kind === "error") {
+      nextNodes.set(node.id, prevState);
+      continue;
+    }
 
-    if (!compiled?.isOk()) {
-      const errStr = String(
-        (compiled as { error: unknown } | undefined)?.error ?? "compile failed",
+    const compiled = compiledNodes.get(node.id)!;
+    if (!compiled.isOk()) {
+      nextNodes.set(
+        node.id,
+        errorState(node.kind, "compile", errMessage(compiled as { error: unknown }), meta.tick),
       );
-      nextNodes.set(node.id, { kind: "tick", context: { compileError: errStr }, outputs: {} });
       continue;
     }
 
     if (node.kind === "stock") {
-      const prevState = prev.nodes.get(node.id) as StockState;
-      const inflows = flowEdges
-        .filter((e) => e.target.node === node.id)
-        .map((e) => flowRates.get(e.id) ?? 0);
-      const outflows = flowEdges
-        .filter((e) => e.source.node === node.id && e.source.node !== e.target.node)
-        .map((e) => flowRates.get(e.id) ?? 0);
-      nextNodes.set(node.id, integrateStock(prevState, inflows, outflows));
+      const inflowEdges = flowEdges.filter((e) => e.target.node === node.id);
+      const outflowEdges = flowEdges.filter(
+        (e) => e.source.node === node.id && e.source.node !== e.target.node,
+      );
+      const erroredEdge = [...inflowEdges, ...outflowEdges].find(
+        (e) => nextEdges.get(e.id)?.kind === "error",
+      );
+      if (erroredEdge) {
+        nextNodes.set(
+          node.id,
+          errorState(
+            "stock",
+            "runtime",
+            `Node ${node.id} depends on errored flow edge ${erroredEdge.id}`,
+            meta.tick,
+          ),
+        );
+        continue;
+      }
+      const rateOf = (edgeId: string): number => {
+        const state = nextEdges.get(edgeId);
+        return state?.kind === "flow" ? state.rate : 0;
+      };
+      nextNodes.set(
+        node.id,
+        integrateStock(
+          prevState as StockState,
+          inflowEdges.map((e) => rateOf(e.id)),
+          outflowEdges.map((e) => rateOf(e.id)),
+          { nodeId: node.id, tick: meta.tick },
+        ),
+      );
       continue;
     }
 
     if (node.kind === "variable") {
-      nextNodes.set(node.id, runVariable(node));
+      nextNodes.set(node.id, runVariable(node, meta.tick));
       continue;
     }
 
     if (node.kind === "tick") {
-      const prevState = prev.nodes.get(node.id);
       const prevContext = prevState?.kind === "tick" ? prevState.context : null;
       const result = runTick(node, compiled.value, {
         prevContext,
@@ -134,11 +224,10 @@ const stepTick = (
       if (result.isOk()) {
         nextNodes.set(node.id, result.value);
       } else {
-        nextNodes.set(node.id, {
-          kind: "tick",
-          context: { compileError: String((result as { error: unknown }).error) },
-          outputs: {},
-        });
+        nextNodes.set(
+          node.id,
+          errorState("tick", "runtime", errMessage(result as { error: unknown }), meta.tick),
+        );
       }
       continue;
     }
@@ -151,37 +240,10 @@ const stepTick = (
     nextNodes.set(node.id, { kind: "tick", context: null, outputs: {} });
   }
 
-  const nextState: SimState = { nodes: nextNodes };
-
-  const nodeEntities = graph.nodes.map((node) => ({
-    id: node.id,
-    type: "node" as const,
-    state: nextNodes.get(node.id)!,
-  }));
-
-  const edgeEntities = graph.edges
-    .filter((e) => !STRUCTURAL_EDGE_KINDS.has(e.kind))
-    .map((edge) => {
-      let state: EntityState;
-      if (edge.kind === "flow") {
-        state = { kind: "flow", rate: flowRates.get(edge.id) ?? 0 };
-      } else if (edge.kind === "channel") {
-        state = { kind: "channel", pending: 0 };
-      } else {
-        state = { kind: "channel", pending: 0 };
-      }
-      return { id: edge.id, type: "edge" as const, state };
-    });
-
-  const snapshot: TickSnapshot = {
-    tick: meta.tick,
-    entities: [...nodeEntities, ...edgeEntities],
-  };
-
-  return { state: nextState, snapshot };
+  return { nodes: nextNodes, edges: nextEdges };
 };
 
-const buildInitialSnapshot = (tick: number, state: SimState, graph: GraphDef): TickSnapshot => {
+const buildSnapshot = (tick: number, state: SimState, graph: GraphDef): TickSnapshot => {
   const nodeEntities = graph.nodes.map((node) => ({
     id: node.id,
     type: "node" as const,
@@ -190,17 +252,11 @@ const buildInitialSnapshot = (tick: number, state: SimState, graph: GraphDef): T
 
   const edgeEntities = graph.edges
     .filter((e) => !STRUCTURAL_EDGE_KINDS.has(e.kind))
-    .map((edge) => {
-      let state: EntityState;
-      if (edge.kind === "flow") {
-        state = { kind: "flow", rate: 0 };
-      } else if (edge.kind === "channel") {
-        state = { kind: "channel", pending: 0 };
-      } else {
-        state = { kind: "channel", pending: 0 };
-      }
-      return { id: edge.id, type: "edge" as const, state };
-    });
+    .map((edge) => ({
+      id: edge.id,
+      type: "edge" as const,
+      state: state.edges.get(edge.id)!,
+    }));
 
   return { tick, entities: [...nodeEntities, ...edgeEntities] };
 };
@@ -222,19 +278,15 @@ export async function* runSimulation(
     graph.edges.map((e) => [e.id, compileEdgeBehavior(e.behavior, e.kind)]),
   );
 
-  let state = initialState(graph, compiledNodes);
+  let state = initialState(graph, compiledNodes, compiledEdges, opts.fromTick);
 
   for (let tick = opts.fromTick; tick <= opts.toTick; tick += 1) {
-    if (tick === opts.fromTick) {
-      const snapshot = buildInitialSnapshot(tick, state, graph);
-      onTick?.(snapshot);
-      yield snapshot;
-    } else {
-      const stepped = stepTick(graph, compiledNodes, compiledEdges, state, { tick, rand });
-      state = stepped.state;
-      onTick?.(stepped.snapshot);
-      yield stepped.snapshot;
+    if (tick !== opts.fromTick) {
+      state = stepTick(graph, compiledNodes, compiledEdges, state, { tick, rand });
     }
+    const snapshot = buildSnapshot(tick, state, graph);
+    onTick?.(snapshot);
+    yield snapshot;
   }
 
   return { finalTick: opts.toTick };

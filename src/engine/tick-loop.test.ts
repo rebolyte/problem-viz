@@ -134,7 +134,7 @@ describe("runSimulation", () => {
     }
   });
 
-  it("compile failure yields stub state with compileError, sim does not crash", async () => {
+  it("S8: compile failure yields sticky error state with archetype identity, sim does not crash", async () => {
     const graph: GraphDef = {
       nodes: [
         {
@@ -152,9 +152,12 @@ describe("runSimulation", () => {
     expect(snapshots).toHaveLength(2);
     for (const s of snapshots) {
       const e = s.entities.find((e) => e.id === "broken");
-      expect(e?.state.kind).toBe("tick");
-      if (e?.state.kind === "tick") {
-        expect((e.state.context as Record<string, unknown>).compileError).toBeString();
+      expect(e?.state.kind).toBe("error");
+      if (e?.state.kind === "error") {
+        expect(e.state.archetype).toBe("tick");
+        expect(e.state.phase).toBe("compile");
+        expect(e.state.tick).toBe(0);
+        expect(e.state.message.length).toBeGreaterThan(0);
       }
     }
   });
