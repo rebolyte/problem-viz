@@ -124,3 +124,43 @@ export const arbRunConfig: fc.Arbitrary<RunConfig> = fc.record({
   fromTick: fc.constant(0),
   toTick: fc.integer({ min: 1, max: 25 }),
 });
+
+// S10 harness: every flow is stock→stock and never a self-loop, so total stock
+// value must be conserved across ticks.
+export const arbConservingGraph: fc.Arbitrary<GraphDef> = fc
+  .record({
+    balances: fc.array(fc.integer({ min: 1, max: 1000 }), { minLength: 2, maxLength: 4 }),
+    flows: fc.array(
+      fc.record({
+        sourceIdx: fc.nat({ max: 3 }),
+        offset: fc.integer({ min: 1, max: 3 }),
+        templateIdx: fc.nat({ max: FLOW_TEMPLATES.length - 1 }),
+        rate: fc.constantFrom(...RATES),
+      }),
+      { minLength: 1, maxLength: 4 },
+    ),
+  })
+  .map(({ balances, flows }) => {
+    const nodes = balances.map((balance, i) => ({
+      id: `s${i}`,
+      kind: "stock" as const,
+      schema: { config: { initialBalance: { type: "number" as const, default: balance } } },
+      config: { initialBalance: balance },
+      meta: {},
+    }));
+    const edges = flows.map(({ sourceIdx, offset, templateIdx, rate }, i) => {
+      const source = sourceIdx % nodes.length;
+      const target = (source + offset) % nodes.length;
+      const template = FLOW_TEMPLATES[templateIdx]!;
+      return {
+        id: `f${i}`,
+        source: { node: nodes[source]!.id },
+        target: { node: nodes[target === source ? (target + 1) % nodes.length : target]!.id },
+        kind: "flow" as const,
+        ...(template.behavior ? { behavior: template.behavior } : {}),
+        config: template.config(rate),
+        meta: {},
+      };
+    });
+    return { nodes, edges: edges.filter((e) => e.source.node !== e.target.node) };
+  });

@@ -24,17 +24,17 @@ The executable spec for the engine. Every rule has at least one test whose name 
 
 ## Status
 
-| Rule | Status                                                        | Test                                                                       |
-| ---- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| S1   | implemented                                                   | `src/engine/tick-loop.test.ts`, `src/engine/semantics/determinism.test.ts` |
-| S2   | partial (stocks/variables/flows; no routing)                  | pending task 3.2                                                           |
-| S3   | pending                                                       | task 3.2 (wire), 3.3 (register)                                            |
-| S4   | implemented                                                   | `src/engine/semantics/order-independence.test.ts`                          |
-| S5   | implemented                                                   | `src/engine/compile/compile-behavior.test.ts` (S5 cases)                   |
-| S6   | pending                                                       | task 3.4                                                                   |
-| S7   | pending (single shared PRNG today)                            | task 3.4                                                                   |
-| S8   | implemented                                                   | `src/engine/semantics/error-containment.test.ts`                           |
-| S9   | implemented (incl. flow→stock poisoning)                      | `src/engine/semantics/error-containment.test.ts`, archetype tests          |
-| S10  | partial (self-loop inflow idiom works; conservation untested) | task 3.2                                                                   |
-| S11  | pending                                                       | phase 5                                                                    |
-| S12  | implemented (current entity kinds)                            | `src/engine/semantics/serialization.test.ts`                               |
+| Rule | Status                                       | Test                                                                            |
+| ---- | -------------------------------------------- | ------------------------------------------------------------------------------- |
+| S1   | implemented                                  | `src/engine/tick-loop.test.ts`, `src/engine/semantics/determinism.test.ts`      |
+| S2   | implemented except channel step 4 (task 3.3) | `src/engine/tick-loop.test.ts` (S2/S3 cases), `src/fixtures/{fire,dcf}.test.ts` |
+| S3   | wire implemented; register pending task 3.3  | `src/engine/tick-loop.test.ts` (cycle back-edge case)                           |
+| S4   | implemented                                  | `src/engine/semantics/order-independence.test.ts`                               |
+| S5   | implemented                                  | `src/engine/compile/compile-behavior.test.ts` (S5 cases)                        |
+| S6   | pending                                      | task 3.4                                                                        |
+| S7   | pending (single shared PRNG today)           | task 3.4                                                                        |
+| S8   | implemented                                  | `src/engine/semantics/error-containment.test.ts`                                |
+| S9   | implemented (incl. flow→stock poisoning)     | `src/engine/semantics/error-containment.test.ts`, archetype tests               |
+| S10  | implemented                                  | `src/engine/semantics/conservation.test.ts`                                     |
+| S11  | pending                                      | phase 5                                                                         |
+| S12  | implemented (current entity kinds)           | `src/engine/semantics/serialization.test.ts`                                    |
