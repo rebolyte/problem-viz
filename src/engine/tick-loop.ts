@@ -205,11 +205,15 @@ const buildInitialSnapshot = (tick: number, state: SimState, graph: GraphDef): T
   return { tick, entities: [...nodeEntities, ...edgeEntities] };
 };
 
+const sortById = <T extends { id: string }>(items: readonly T[]): T[] =>
+  [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
 export async function* runSimulation(
-  graph: GraphDef,
+  input: GraphDef,
   opts: RunConfig,
   onTick?: (snapshot: TickSnapshot) => void,
 ): AsyncGenerator<TickSnapshot, { finalTick: number }, void> {
+  const graph: GraphDef = { nodes: sortById(input.nodes), edges: sortById(input.edges) };
   const rand = makePrng(opts.seed);
   const compiledNodes = new Map(
     graph.nodes.map((n) => [n.id, compileNodeBehavior(n.behavior, n.kind)]),
