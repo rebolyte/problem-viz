@@ -12,13 +12,21 @@ export type TickCtx = {
   rand: () => number;
 };
 
+export type VariableCtx = {
+  inputs: Record<string, unknown>;
+  config: Record<string, unknown>;
+  tick: number;
+  rand: () => number;
+};
+
 export type CompiledNodeBehavior = {
   init?: (config: Record<string, unknown>) => unknown;
   tick?: (ctx: TickCtx) => { state: unknown; outputs: Record<string, unknown> };
+  value?: (ctx: VariableCtx) => number;
 };
 
 export type FlowRateCtx = {
-  source: { value: number };
+  source: { value: number | undefined };
   config: Record<string, unknown>;
   tick: number;
   rand: () => number;

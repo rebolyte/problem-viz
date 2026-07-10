@@ -49,6 +49,7 @@ export type EntityState =
   | { kind: "process"; suspended: true }
   | { kind: "flow"; rate: number }
   | { kind: "channel"; pending: number }
+  | { kind: "passthrough"; lastValue: unknown }
   | {
       kind: "error";
       archetype: NodeKind | EdgeKind;
