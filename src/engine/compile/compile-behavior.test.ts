@@ -92,3 +92,56 @@ test("node and edge caches are independent (same source, different kinds)", () =
   const edgeRes = compileEdgeBehavior(source, "flow");
   expect(nodeRes).not.toBe(edgeRes);
 });
+
+test("S5: Math.random inside a behavior throws at call time", () => {
+  const res = compileNodeBehavior(
+    `defineNode({ tick: () => ({ state: Math.random(), outputs: {} }) });`,
+    "tick",
+  );
+  expect(Result.isOk(res)).toBe(true);
+  if (!Result.isOk(res)) return;
+  expect(() =>
+    res.value.tick!({ state: 0, inputs: {}, config: {}, tick: 0, rand: () => 0.5 }),
+  ).toThrow(/use rand from context/);
+});
+
+test("S5: deterministic Math functions remain available", () => {
+  const res = compileNodeBehavior(
+    `defineNode({ tick: () => ({ state: Math.floor(3.7) + Math.max(1, 2), outputs: {} }) });`,
+    "tick",
+  );
+  expect(Result.isOk(res)).toBe(true);
+  if (!Result.isOk(res)) return;
+  const out = res.value.tick!({ state: 0, inputs: {}, config: {}, tick: 0, rand: () => 0.5 });
+  expect(out.state).toBe(5);
+});
+
+test("S5: Date at behavior top level fails compilation with capability message", () => {
+  const res = compileNodeBehavior(`const t = Date.now(); defineNode({});`, "tick");
+  expect(Result.isOk(res)).toBe(false);
+  if (!Result.isOk(res)) {
+    expect(res.error.code).toBe("compile_failed");
+    expect(res.error.message).toContain("use rand from context");
+  }
+});
+
+test("S5: new Date() inside a behavior throws at call time", () => {
+  const res = compileNodeBehavior(
+    `defineNode({ tick: () => ({ state: new Date().getTime(), outputs: {} }) });`,
+    "tick",
+  );
+  expect(Result.isOk(res)).toBe(true);
+  if (!Result.isOk(res)) return;
+  expect(() =>
+    res.value.tick!({ state: 0, inputs: {}, config: {}, tick: 0, rand: () => 0.5 }),
+  ).toThrow(/use rand from context/);
+});
+
+test("S5: edge rate using Math.random throws at call time", () => {
+  const res = compileEdgeBehavior(`defineEdge({ rate: () => Math.random() });`, "flow");
+  expect(Result.isOk(res)).toBe(true);
+  if (!Result.isOk(res)) return;
+  expect(() =>
+    res.value.rate!({ source: { value: 1 }, config: {}, tick: 0, rand: () => 0.5 }),
+  ).toThrow(/use rand from context/);
+});

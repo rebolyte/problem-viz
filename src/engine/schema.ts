@@ -12,6 +12,7 @@ export type NodeSchemaV2 = {
   context?: Record<string, ConfigField>;
   inputs?: Record<string, string>;
   outputs?: Record<string, string>;
+  initial?: string;
 };
 
 export type EdgeSchemaV2 = {

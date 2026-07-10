@@ -5,7 +5,7 @@ import { loomError } from "../errors.ts";
 import { Result } from "better-result";
 
 type FlowEvalCtx = {
-  sourceValue: number;
+  sourceValue: number | undefined;
   tick: number;
   rand: () => number;
 };

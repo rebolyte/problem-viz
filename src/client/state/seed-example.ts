@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import type { CreateEdgeInput, CreateNodeInput } from "../../server/graph/store.ts";
+import { buildGraph } from "../../fixtures/compound-interest.ts";
 
 const positionFromSeedId = (seedId: string): { x: number; y: number } => {
   let h = 0;
@@ -17,32 +18,25 @@ export const buildCompoundInterestGraph = (): {
   edges: CreateEdgeInput[];
 } => {
   const seedId = nanoid();
-  const balanceId = `balance-${seedId}`;
-  const interestId = `interest-${seedId}`;
   const position = positionFromSeedId(seedId);
-  const nodes: CreateNodeInput[] = [
-    {
-      id: balanceId,
-      kind: "stock",
-      schema: {
-        config: {
-          initialBalance: { type: "number", default: 100, min: 0, step: 1 },
-        },
-      },
-      config: { initialBalance: 100 },
-      meta: { label: "Balance", position },
-    },
-  ];
-  const edges: CreateEdgeInput[] = [
-    {
-      id: interestId,
-      sourceNode: balanceId,
-      targetNode: balanceId,
-      kind: "flow",
-      behavior: "defineEdge({ rate: ({ source, config }) => source.value * config.rate });",
-      config: { rate: 0.1 },
-      meta: { label: "Interest" },
-    },
-  ];
+  const graph = buildGraph();
+  const suffixed = (id: string) => `${id}-${seedId}`;
+  const nodes: CreateNodeInput[] = graph.nodes.map((node) => ({
+    id: suffixed(node.id),
+    kind: node.kind,
+    schema: node.schema,
+    ...(node.behavior ? { behavior: node.behavior } : {}),
+    config: node.config,
+    meta: { ...node.meta, position },
+  }));
+  const edges: CreateEdgeInput[] = graph.edges.map((edge) => ({
+    id: suffixed(edge.id),
+    sourceNode: suffixed(edge.source.node),
+    targetNode: suffixed(edge.target.node),
+    kind: edge.kind,
+    ...(edge.behavior ? { behavior: edge.behavior } : {}),
+    config: edge.config,
+    meta: edge.meta,
+  }));
   return { nodes, edges };
 };

@@ -134,7 +134,7 @@ describe("runSimulation", () => {
     }
   });
 
-  it("compile failure yields stub state with compileError, sim does not crash", async () => {
+  it("S8: compile failure yields sticky error state with archetype identity, sim does not crash", async () => {
     const graph: GraphDef = {
       nodes: [
         {
@@ -152,11 +152,115 @@ describe("runSimulation", () => {
     expect(snapshots).toHaveLength(2);
     for (const s of snapshots) {
       const e = s.entities.find((e) => e.id === "broken");
-      expect(e?.state.kind).toBe("tick");
-      if (e?.state.kind === "tick") {
-        expect((e.state.context as Record<string, unknown>).compileError).toBeString();
+      expect(e?.state.kind).toBe("error");
+      if (e?.state.kind === "error") {
+        expect(e.state.archetype).toBe("tick");
+        expect(e.state.phase).toBe("compile");
+        expect(e.state.tick).toBe(0);
+        expect(e.state.message.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("S2/S3: passthrough delivers tick-node outputs downstream within the same tick", async () => {
+    const graph: GraphDef = {
+      nodes: [
+        {
+          id: "a",
+          kind: "tick",
+          schema: tickSchema,
+          behavior: `defineNode({ tick: ({ tick }) => ({ state: tick, outputs: { out: "a" + tick } }) });`,
+          config: {},
+          meta: {},
+        },
+        {
+          id: "b",
+          kind: "tick",
+          schema: tickSchema,
+          behavior: `defineNode({ tick: ({ inputs }) => ({ state: inputs.fromA ?? null, outputs: {} }) });`,
+          config: {},
+          meta: {},
+        },
+      ],
+      edges: [
+        {
+          id: "wire",
+          source: { node: "a", port: "out" },
+          target: { node: "b", port: "fromA" },
+          kind: "passthrough",
+          config: {},
+          meta: {},
+        },
+      ],
+    };
+    const snapshots = await collectSnapshots(graph, { seed: 1, fromTick: 0, toTick: 2 });
+
+    const stateOf = (tick: number, id: string) => {
+      const e = snapshots[tick]?.entities.find((e) => e.id === id);
+      if (e?.state.kind !== "tick") throw new Error("bad state");
+      return e.state.context;
+    };
+
+    expect(stateOf(1, "b")).toBe("a1");
+    expect(stateOf(2, "b")).toBe("a2");
+
+    const wire = snapshots[1]?.entities.find((e) => e.id === "wire");
+    expect(wire?.state).toEqual({ kind: "passthrough", lastValue: "a1" });
+  });
+
+  it("S3: passthrough cycle breaks at the back-edge with exactly one tick of delay", async () => {
+    const echo = (input: string, out: string) =>
+      `defineNode({ tick: ({ inputs, tick }) => ({ state: inputs.${input} ?? null, outputs: { out: "${out}" + tick } }) });`;
+    const graph: GraphDef = {
+      nodes: [
+        {
+          id: "a",
+          kind: "tick",
+          schema: tickSchema,
+          behavior: echo("fromB", "a"),
+          config: {},
+          meta: {},
+        },
+        {
+          id: "b",
+          kind: "tick",
+          schema: tickSchema,
+          behavior: echo("fromA", "b"),
+          config: {},
+          meta: {},
+        },
+      ],
+      edges: [
+        {
+          id: "forward",
+          source: { node: "a", port: "out" },
+          target: { node: "b", port: "fromA" },
+          kind: "passthrough",
+          config: {},
+          meta: {},
+        },
+        {
+          id: "back",
+          source: { node: "b", port: "out" },
+          target: { node: "a", port: "fromB" },
+          kind: "passthrough",
+          config: {},
+          meta: {},
+        },
+      ],
+    };
+    const snapshots = await collectSnapshots(graph, { seed: 1, fromTick: 0, toTick: 2 });
+
+    const stateOf = (tick: number, id: string) => {
+      const e = snapshots[tick]?.entities.find((e) => e.id === id);
+      if (e?.state.kind !== "tick") throw new Error("bad state");
+      return e.state.context;
+    };
+
+    expect(stateOf(1, "a")).toBeNull();
+    expect(stateOf(1, "b")).toBe("a1");
+    expect(stateOf(2, "a")).toBe("b1");
+    expect(stateOf(2, "b")).toBe("a2");
   });
 
   it("variable node yields value from config.amount every tick", async () => {

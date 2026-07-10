@@ -48,7 +48,17 @@ export type EntityState =
   | { kind: "variable"; value: number }
   | { kind: "process"; suspended: true }
   | { kind: "flow"; rate: number }
-  | { kind: "channel"; pending: number };
+  | { kind: "channel"; pending: number }
+  | { kind: "passthrough"; lastValue: unknown }
+  | {
+      kind: "error";
+      archetype: NodeKind | EdgeKind;
+      phase: "compile" | "runtime";
+      message: string;
+      tick: number;
+    };
+
+export type ErrorEntityState = Extract<EntityState, { kind: "error" }>;
 
 export type TickSnapshot = {
   tick: number;

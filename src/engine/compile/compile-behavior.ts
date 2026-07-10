@@ -12,13 +12,21 @@ export type TickCtx = {
   rand: () => number;
 };
 
+export type VariableCtx = {
+  inputs: Record<string, unknown>;
+  config: Record<string, unknown>;
+  tick: number;
+  rand: () => number;
+};
+
 export type CompiledNodeBehavior = {
   init?: (config: Record<string, unknown>) => unknown;
   tick?: (ctx: TickCtx) => { state: unknown; outputs: Record<string, unknown> };
+  value?: (ctx: VariableCtx) => number;
 };
 
 export type FlowRateCtx = {
-  source: { value: number };
+  source: { value: number | undefined };
   config: Record<string, unknown>;
   tick: number;
   rand: () => number;
@@ -27,6 +35,33 @@ export type FlowRateCtx = {
 export type CompiledEdgeBehavior = {
   rate?: (ctx: FlowRateCtx) => number;
 };
+
+const unavailable = (name: string) =>
+  function unavailableCapability(): never {
+    throw new Error(`${name} is unavailable in behaviors: use rand from context`);
+  };
+
+const mathShadow = Object.freeze(
+  Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(Math),
+      random: { value: unavailable("Math.random") },
+    },
+  ),
+);
+
+const dateShadow = Object.assign(unavailable("Date"), { now: unavailable("Date.now") });
+
+const performanceShadow = Object.freeze({ now: unavailable("performance.now") });
+
+const cryptoShadow = Object.freeze({
+  getRandomValues: unavailable("crypto.getRandomValues"),
+  randomUUID: unavailable("crypto.randomUUID"),
+});
+
+const SHADOW_PARAMS = ["Math", "Date", "performance", "crypto"] as const;
+const SHADOW_VALUES = [mathShadow, dateShadow, performanceShadow, cryptoShadow];
 
 const nodeCache = new Map<number, Result<CompiledNodeBehavior, LoomError>>();
 const edgeCache = new Map<number, Result<CompiledEdgeBehavior, LoomError>>();
@@ -44,8 +79,8 @@ export const compileNodeBehavior = (
     const defineNode = (def: CompiledNodeBehavior) => {
       captured = def;
     };
-    const factory = new Function("defineNode", source);
-    factory(defineNode);
+    const factory = new Function("defineNode", ...SHADOW_PARAMS, source);
+    factory(defineNode, ...SHADOW_VALUES);
     const result = Result.ok(captured);
     nodeCache.set(key, result);
     return result;
@@ -69,8 +104,8 @@ export const compileEdgeBehavior = (
     const defineEdge = (def: CompiledEdgeBehavior) => {
       captured = def;
     };
-    const factory = new Function("defineEdge", source);
-    factory(defineEdge);
+    const factory = new Function("defineEdge", ...SHADOW_PARAMS, source);
+    factory(defineEdge, ...SHADOW_VALUES);
     const result = Result.ok(captured);
     edgeCache.set(key, result);
     return result;
